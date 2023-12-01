@@ -99,7 +99,7 @@ if __name__ == "__main__":
         if args.b.split(".")[-1] == "pdb":
             structure = PDBParser.read_PDB_file('PDB1', args.b, hetatm=False, water=False)
         elif args.b.split(".")[-1] == "cif":
-            structure = mmCIFParser.read_mmCIF_file(args.b)
+            structure = mmCIFParser.read_mmCIF_file(args.b, hetatm=True)
         else:
             raise Exception("Only PDB and mmCIF files are supported for structure input.")
         sim_map = sb.gaussian_blur_real_space(prot=structure, resolution=args.res)

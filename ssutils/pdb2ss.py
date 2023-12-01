@@ -150,7 +150,7 @@ def gen_simu_map(file_path, res, output_path, densMap=None):
         pdb_path = os.path.abspath(file_path)
         # output_path = os.path.abspath(output_path)
         if file_path.split(".")[-1] == "cif":
-            st = mmCIFParser.read_mmCIF_file(pdb_path)
+            st = mmCIFParser.read_mmCIF_file(pdb_path, hetatm=True)
         elif file_path.split(".")[-1] == "pdb":
             st = PDBParser.read_PDB_file("pdb1", pdb_path)
         else:
