@@ -63,31 +63,6 @@ def split_pdb_by_ss(pdb_path, output_dir):
     strucio.save_structure(os.path.join(output_dir, f"{pdb_path.stem}_ssB.pdb"), arr_b)
     strucio.save_structure(os.path.join(output_dir, f"{pdb_path.stem}_ssC.pdb"), arr_c)
 
-    # import gemmi
-    # from gemmi import cif
-    #
-    # block_in = cif.read(str(pdb_path)).sole_block()
-    # gemmi_st = gemmi.make_structure_from_block(block_in)
-    #
-    # block_a = cif.read(os.path.join(output_dir, f"{pdb_path.stem}_ssA.cif")).sole_block()
-    # block_b = cif.read(os.path.join(output_dir, f"{pdb_path.stem}_ssB.cif")).sole_block()
-    # block_c = cif.read(os.path.join(output_dir, f"{pdb_path.stem}_ssC.cif")).sole_block()
-    #
-    # gemmi_st_a = gemmi.make_structure_from_block(block_a)
-    # gemmi_st_a.entities = gemmi_st.entities
-    # gemmi_st_b = gemmi.make_structure_from_block(block_b)
-    # gemmi_st_b.entities = gemmi_st.entities
-    # gemmi_st_c = gemmi.make_structure_from_block(block_c)
-    # gemmi_st_c.entities = gemmi_st.entities
-    #
-    # gemmi_st_a.update_mmcif_block(block_a)
-    # gemmi_st_b.update_mmcif_block(block_b)
-    # gemmi_st_c.update_mmcif_block(block_c)
-    #
-    # block_a.write_file(os.path.join(output_dir, f"{pdb_path.stem}_ssA.cif"))
-    # block_b.write_file(os.path.join(output_dir, f"{pdb_path.stem}_ssB.cif"))
-    # block_c.write_file(os.path.join(output_dir, f"{pdb_path.stem}_ssC.cif"))
-
 
 def gen_simu_map(file_path, res, output_path, densMap=None):
     """
@@ -141,7 +116,7 @@ def gen_simu_map(file_path, res, output_path, densMap=None):
                     mrc_new.header.mapr = mrc.header.mapr
                     mrc_new.header.maps = mrc.header.maps
                     mrc_new.update_header_stats()
-                    mrc_new.flush() # write to disk
+                    mrc_new.flush()  # write to disk
         else:
             raise Exception("No atoms in PDB file and no density map specified.")
     else:
