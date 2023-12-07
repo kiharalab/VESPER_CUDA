@@ -55,7 +55,9 @@ if __name__ == "__main__":
     orig.add_argument("-mrcout", action="store_true", default=False, help="Output the transformed query map def=false")
     orig.add_argument("-c", type=int, default=2, help="Number of threads to use def=2")
     orig.add_argument("-al", type=float, default=None, help="Angle limit for searching def=None")
-    orig.add_argument("-res", type=float, default=None, help="Resolution of the experimental map used to create simulated map from structure")
+    orig.add_argument(
+        "-res", type=float, default=None, help="Resolution of the experimental map used to create simulated map from structure"
+    )
 
     # secondary structure matching menu
     ss.add_argument("-a", type=str, required=True, help="MAP1.mrc (large)")
@@ -84,20 +86,23 @@ if __name__ == "__main__":
     ss.add_argument("-gpu", type=int, help="GPU ID to use for CUDA acceleration def=0")
     ss.add_argument("-pdbin", type=str, default=None, help="Input PDB file to be transformed def=None")
     ss.add_argument("-c", type=int, default=2, help="Number of threads to use def=2")
-    ss.add_argument("-res", type=float, default=None, help="Resolution of the experimental map used to create simulated map from structure")
+    ss.add_argument(
+        "-res", type=float, default=None, help="Resolution of the experimental map used to create simulated map from structure"
+    )
 
     args = parser.parse_args()
 
     tgt_ss = None
 
-    if args.b.split(".")[-1] == 'pdb' or args.b.split(".")[-1] == 'cif':
+    if args.b.split(".")[-1] == "pdb" or args.b.split(".")[-1] == "cif":
         assert args.res is not None, "Please specify resolution when using structure as input."
         # simulate the map at target resolution
         from TEMPy.protein.structure_blurrer import StructureBlurrer
         from TEMPy.protein.structure_parser import PDBParser, mmCIFParser
+
         sb = StructureBlurrer()
         if args.b.split(".")[-1] == "pdb":
-            structure = PDBParser.read_PDB_file('PDB1', args.b, hetatm=False, water=False)
+            structure = PDBParser.read_PDB_file("PDB1", args.b, hetatm=False, water=False)
         elif args.b.split(".")[-1] == "cif":
             structure = mmCIFParser.read_mmCIF_file(args.b, hetatm=True)
         else:
@@ -111,6 +116,7 @@ if __name__ == "__main__":
             if args.res is None:
                 raise ValueError("Please specify resolution when using structure as input.")
             from ssutils.pdb2ss import gen_npy
+
             print("Generating secondary structure assignment for input structure...")
             tgt_ss = gen_npy(args.b, args.res, verbose=True)
         args.b = "tmp_data/simu_map.mrc"
@@ -259,8 +265,30 @@ if __name__ == "__main__":
         else:
             print("Transform PDB file: ", args.pdbin)
 
+        # preliminary checks for input secondary structure predictions:
+        ss_ref_pred = np.load(args.npa).astype(np.float32)
+        ss_ref_pred_max = np.max(ss_ref_pred, axis=-1)
+        confidence = np.count_nonzero(ss_ref_pred_max > 0.9) / np.count_nonzero(
+            ss_ref_pred_max
+        )  # percent of voxels with probability > 0.9
+
+        # Extract non-zero values and get argmax
+        nonzero_vals = ss_ref_pred[ss_ref_pred > 0].reshape(-1, ss_ref_pred.shape[-1])
+        preds = np.argmax(nonzero_vals, axis=-1)
+
+        # Calculate frequency of each unique value
+        unique_vals, counts = np.unique(preds, return_counts=True)
+        normalized_counts = counts / counts.sum()
+
+        norm_count_dict = dict(zip(unique_vals, normalized_counts))
+
+        drna_content = norm_count_dict[3] if 3 in norm_count_dict else 0.0
+
+        # set fallback to True if confidence is low or if there is a high amount of double-stranded RNA
+        fallback = (confidence < 0.05 or drna_content > 0.4)
+
         # construct mrc objects
-        ref_map = EMmap(args.a, ss_data=np.load(args.npa).astype(np.float32))
+        ref_map = EMmap(args.a, ss_data=ss_ref_pred)
         # generate numpy array for target map if input is a PDB file
         if tgt_ss is not None:
             tgt_map = EMmap(args.b, ss_data=tgt_ss.astype(np.float32))
@@ -299,4 +327,9 @@ if __name__ == "__main__":
             save_vec=args.S,
         )
 
-        fitter.fit_ss()
+        if fallback:
+            print("The prediction quality is low, falling back to original mode.")
+            print("Confidence: ", confidence, "Predicted DNA/RNA content: ", drna_content)
+            fitter.fit()
+        else:
+            fitter.fit_ss()
