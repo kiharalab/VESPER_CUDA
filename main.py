@@ -1,11 +1,13 @@
 import argparse
 import os
 from enum import Enum
+import sys
+import time
+
+import numpy as np
 
 from fitter import MapFitter
 from map import EMmap, unify_dims
-import numpy as np
-import sys
 
 
 class Mode(Enum):
@@ -265,6 +267,8 @@ if __name__ == "__main__":
         else:
             print("Transform PDB file: ", args.pdbin)
 
+        start_check = time.time()
+
         # preliminary checks for input secondary structure predictions:
         ss_ref_pred = np.load(args.npa).astype(np.float32)
         ss_ref_pred_max = np.max(ss_ref_pred, axis=-1)
@@ -285,7 +289,10 @@ if __name__ == "__main__":
         drna_content = norm_count_dict[3] if 3 in norm_count_dict else 0.0
 
         # set fallback to True if confidence is low or if there is a high amount of double-stranded RNA
-        fallback = (confidence < 0.05 or drna_content > 0.4)
+        fallback = confidence < 0.05 or drna_content > 0.4
+
+        start_resample_map = time.time()
+        print("Check time: ", start_resample_map - start_check, " seconds")
 
         # construct mrc objects
         ref_map = EMmap(args.a, ss_data=ss_ref_pred)
@@ -308,6 +315,9 @@ if __name__ == "__main__":
         tgt_map.resample_and_vec(dreso=args.g)
         print()
 
+        start_init_fitter = time.time()
+        print("Resample time: ", start_init_fitter - start_resample_map, " seconds")
+
         fitter = MapFitter(
             ref_map,
             tgt_map,
@@ -327,9 +337,16 @@ if __name__ == "__main__":
             save_vec=args.S,
         )
 
+        start_fit = time.time()
+        print("Init fitter time: ", start_fit - start_init_fitter, " seconds")
+
         if fallback:
             print("The prediction quality is low, falling back to original mode.")
             print("Confidence: ", confidence, "Predicted DNA/RNA content: ", drna_content)
             fitter.fit()
         else:
             fitter.fit_ss()
+
+        end_fit = time.time()
+        print("Fit time: ", end_fit - start_fit, " seconds")
+        print("Total time: ", end_fit - start_check, " seconds")

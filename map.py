@@ -4,10 +4,6 @@ import mrcfile
 import numpy as np
 from numba import jit
 
-# from julia.api import Julia
-# jl = Julia(compiled_modules=False)
-# from julia import Main
-
 
 class EMmap:
     """A mrc object that represents the density data and statistics of a given mrc file"""
@@ -149,9 +145,6 @@ class EMmap:
             self.ss_data,
         )
 
-        # Main.include("resample_and_vec.jl")
-        # res_data, res_vec = Main.res_vec_jl(float(self.xwidth), self.orig, src_dims, self.data, self.new_width, self.new_orig, int(self.new_dim), dreso)
-
         # calculate map statistics
         density_sum = np.sum(res_data)
         count = np.count_nonzero(res_data)
@@ -165,27 +158,15 @@ class EMmap:
             )
         )
         if self.ss_data is not None:
-            print(
-                f"#SS Coil SUM={np.sum(res_ss_data[..., 0])}, "
-                f"#COUNT={np.count_nonzero(res_ss_data[..., 0])}, "
-                f"#AVE={np.mean(res_ss_data[res_ss_data[..., 0] > 0])}, "
-                f"#STD={np.linalg.norm(res_ss_data[res_ss_data[..., 0] > 0])}, "
-                f"#STD_norm={np.linalg.norm(res_ss_data[res_ss_data[..., 0] > 0] - ave)}"
-            )
-            print(
-                f"#SS Beta SUM={np.sum(res_ss_data[..., 1])}, "
-                f"#COUNT={np.count_nonzero(res_ss_data[..., 1])}, "
-                f"#AVE={np.mean(res_ss_data[res_ss_data[..., 1] > 0])}, "
-                f"#STD={np.linalg.norm(res_ss_data[res_ss_data[..., 1] > 0])}, "
-                f"#STD_norm={np.linalg.norm(res_ss_data[res_ss_data[..., 1] > 0] - ave)}"
-            )
-            print(
-                f"#SS Alpha Sum={np.sum(res_ss_data[..., 2])}, "
-                f"#COUNT={np.count_nonzero(res_ss_data[..., 2])}, "
-                f"#AVE={np.mean(res_ss_data[res_ss_data[..., 2] > 0])}, "
-                f"#STD={np.linalg.norm(res_ss_data[res_ss_data[..., 2] > 0])}, "
-                f"#STD_norm={np.linalg.norm(res_ss_data[res_ss_data[..., 2] > 0] - ave)}"
-            )
+            for idx, t in enumerate(["Coil", "Beta", "Alpha", "Nucleotide"]):
+                curr_data = res_ss_data[..., idx]
+                print(
+                    f"#SS {t} SUM={np.sum(curr_data)}, "
+                    f"#COUNT={np.count_nonzero(curr_data)}, "
+                    f"#AVE={np.mean(curr_data[curr_data > 0])}, "
+                    f"#STD={np.linalg.norm(curr_data[curr_data > 0])}, "
+                    f"#STD_norm={np.linalg.norm(curr_data[curr_data > 0] - ave)}"
+                )
         else:
             res_ss_data = None
         # update the dest object with the new data and vectors
