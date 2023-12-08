@@ -120,7 +120,7 @@ class EMmap:
         print("cent= " + str(self.new_cent[0]) + ", " + str(self.new_cent[1]) + ", " + str(self.new_cent[2]))
         print("ori= " + str(self.new_orig[0]) + ", " + str(self.new_orig[1]) + ", " + str(self.new_orig[2]))
 
-    def resample_and_vec(self, dreso=16.0, density_map=None):
+    def resample_and_vec(self, dreso=16.0):
         """
         The resample_and_vec function takes a map and resamples it to the desired resolution.
         It also calculates the vectors needed for calculating the DOT score.
@@ -141,7 +141,6 @@ class EMmap:
             self.new_orig,
             self.new_dim,
             dreso,
-            density_map,
             self.ss_data,
         )
 
@@ -158,14 +157,18 @@ class EMmap:
             )
         )
         if self.ss_data is not None:
-            for idx, t in enumerate(["Coil", "Beta", "Alpha", "Nucleotide"]):
+            res_ss_data = np.where(res_ss_data < 0.0, 0.0, res_ss_data)
+            # for idx, t in enumerate(["Coil", "Beta", "Alpha", "Nucleotide"]):
+            for idx, t in enumerate(["Coil", "Beta", "Alpha"]):
                 curr_data = res_ss_data[..., idx]
+                non_zero_count = np.count_nonzero(curr_data)
+                non_zero_data = curr_data[curr_data > 0]
                 print(
                     f"#SS {t} SUM={np.sum(curr_data)}, "
-                    f"#COUNT={np.count_nonzero(curr_data)}, "
-                    f"#AVE={np.mean(curr_data[curr_data > 0])}, "
-                    f"#STD={np.linalg.norm(curr_data[curr_data > 0])}, "
-                    f"#STD_norm={np.linalg.norm(curr_data[curr_data > 0] - ave)}"
+                    f"COUNT={non_zero_count}, "
+                    f"AVE={np.mean(non_zero_data) if non_zero_count != 0.0 else 0.0}"
+                    # f"STD={np.linalg.norm(non_zero_data) if non_zero_count != 0.0 else 0.0}, "
+                    # f"STD_norm={np.linalg.norm(non_zero_data - np.mean(non_zero_data)) if non_zero_count != 0.0 else 0.0}"
                 )
         else:
             res_ss_data = None
@@ -197,32 +200,6 @@ def unify_dims(map_list, voxel_size):
         em_map.new_dim = max_dim
         if em_map.xdim != max_dim:
             em_map.new_orig = em_map.new_cent - 0.5 * voxel_size * max_dim
-
-
-@jit(nopython=True)
-def calc_prob(stp, endp, pos, density_data, prob_data, fsiv):
-    """Density weighted mean shift algorithm using Gaussian filter to sample data in original MRC density map"""
-    dtotal = 0.0
-    pos2 = np.zeros((3,))
-
-    for xp in range(stp[0], endp[0]):
-        rx = float(xp) - pos[0]
-        rx = rx**2
-        for yp in range(stp[1], endp[1]):
-            ry = float(yp) - pos[1]
-            ry = ry**2
-            for zp in range(stp[2], endp[2]):
-                rz = float(zp) - pos[2]
-                rz = rz**2
-                d2 = rx + ry + rz
-                # v = density_data[xp][yp][zp] * prob_data[xp][yp][zp] *  np.exp(-1.5 * d2 * fsiv)
-                v = prob_data[xp][yp][zp] * np.exp(-1.5 * d2 * fsiv)
-                dtotal += v
-                pos2[0] += v * xp
-                pos2[1] += v * yp
-                pos2[2] += v * zp
-
-    return dtotal, pos2
 
 
 @jit(nopython=True)
@@ -260,7 +237,6 @@ def do_resample_and_vec(
     dest_orig,
     new_dim,
     dreso,
-    density_map,
     ss_data,
 ):
     """
@@ -339,10 +315,7 @@ def do_resample_and_vec(
                     endp[2] = src_dims[2]
 
                 # compute the total density
-                if density_map is not None:
-                    dtotal, pos2 = calc_prob(stp, endp, pos, density_map, src_data, fsiv)
-                else:
-                    dtotal, pos2 = calc(stp, endp, pos, src_data, fsiv)
+                dtotal, pos2 = calc(stp, endp, pos, src_data, fsiv)
 
                 if ss_data is not None:
                     dest_ss_data[x][y][z][0], _ = calc(stp, endp, pos, ss_data[..., 0], fsiv)

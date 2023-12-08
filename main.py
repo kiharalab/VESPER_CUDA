@@ -135,8 +135,9 @@ if __name__ == "__main__":
 
         torch.set_grad_enabled(False)
         if not torch.cuda.is_available():
-            print("GPU is specified but CUDA is not available.")
-            exit(1)
+            # print("GPU is specified but CUDA is not available.")
+            # exit(1)
+            raise ValueError("GPU is specified but CUDA is not available.")
         else:
             # set up torch cuda device
             os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
@@ -162,15 +163,20 @@ if __name__ == "__main__":
         print("### Input Params Summary ###")
         print("Reference Map Path: ", args.a)
         print("Target Map Path: ", args.b)
+        print("Reference Map Secondary Structure Path: ", args.npa)
+        if args.npb:
+            print("Target Map Secondary Structure Path: ", args.npb)
+        elif args.b.endswith(".pdb") or args.b.endswith(".cif"):
+            print("Target Map Secondary Structure Path: ", "Assigned from input structure")
         print("Threshold of Reference Map: ", args.t)
         print("Threshold of Target Map: ", args.T)
         print("Bandwidth of the Gaussian filter: ", args.g)
-        print("Search space voxel spacing: ", args.s)
-        print("Search space angle spacing: ", args.A)
+        print("Search voxel spacing: ", args.s)
+        print("Search angle spacing: ", args.A)
         print("Refine Top ", args.N, " models")
-        print("Show topN models in PDB format: ", args.S)
         print("Remove duplicates: ", args.nodup)
         print("Scoring mode: ", modeVal)
+        print("Show topN models in PDB format: ", args.S)
         print("Number of threads to use: ", args.c)
         if args.o:
             print("Output folder: ", args.o)

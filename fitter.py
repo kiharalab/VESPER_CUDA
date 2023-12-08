@@ -5,13 +5,12 @@ from itertools import product
 
 import numpy as np
 import torch
-
-from tqdm import tqdm
-
-from fileio import save_rotated_pdb, save_rotated_mrc, save_vec_as_pdb
 from scipy.spatial.transform import Rotation as R
 from scipy.ndimage import laplace
-from utils import euler_to_mtx, get_score
+from tqdm import tqdm
+
+from utils.fileio import save_rotated_pdb, save_rotated_mrc, save_vec_as_pdb
+from utils.utils import euler_to_mtx, get_score
 
 
 class MapFitter:
@@ -573,7 +572,7 @@ class MapFitter:
 
         for result in tqdm(self.result_list, desc="Removing Duplicates"):
             # duplicate removal
-            if tuple(result["angle"]) in hash_angs.keys():
+            if tuple(result["angle"]) in hash_angs:
                 # print(f"Duplicate: {result_mrc['angle']}")
                 trans = hash_angs[tuple(result["angle"])]
                 # manhattan distance
