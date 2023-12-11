@@ -163,11 +163,6 @@ if __name__ == "__main__":
         print("### Input Params Summary ###")
         print("Reference Map Path: ", args.a)
         print("Target Map Path: ", args.b)
-        print("Reference Map Secondary Structure Path: ", args.npa)
-        if args.npb:
-            print("Target Map Secondary Structure Path: ", args.npb)
-        elif args.b.endswith(".pdb") or args.b.endswith(".cif"):
-            print("Target Map Secondary Structure Path: ", "Assigned from input structure")
         print("Threshold of Reference Map: ", args.t)
         print("Threshold of Target Map: ", args.T)
         print("Bandwidth of the Gaussian filter: ", args.g)
@@ -252,8 +247,11 @@ if __name__ == "__main__":
         print("### Input Params Summary ###")
         print("Reference Map Path: ", args.a)
         print("Target Map Path: ", args.b)
-        # print("Target Secondary Structure Assignment: ", args.npa)
-        # print("Search Secondary Structure Assignment: ", args.npb)
+        print("Reference Map Secondary Structure Path: ", args.npa)
+        if args.npb:
+            print("Target Map Secondary Structure Path: ", args.npb)
+        elif args.b.endswith(".pdb") or args.b.endswith(".cif"):
+            print("Target Map Secondary Structure Path: ", "Assigned from input structure")
         print("Threshold of Reference Map: ", args.t)
         print("Threshold of Target Map: ", args.T)
         print("Bandwidth of the Gaussian filter: ", args.g)
