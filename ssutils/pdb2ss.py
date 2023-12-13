@@ -4,21 +4,15 @@ import shutil
 
 import mrcfile
 import numpy as np
-from TEMPy.maps.map_parser import MapParser
-from TEMPy.protein.structure_blurrer import StructureBlurrer
-from TEMPy.protein.structure_parser import PDBParser, mmCIFParser
-
+# from TEMPy.maps.map_parser import MapParser
+# from TEMPy.protein.structure_blurrer import StructureBlurrer
+# from TEMPy.protein.structure_parser import PDBParser, mmCIFParser
+from utils.pdb2vol import pdb2vol
 import biotite.structure.io as strucio
 import biotite.structure as struc
 
 
-def contains_number(s):
-    return any(i.isdigit() for i in s)
-
-
 def split_pdb_by_ss(pdb_path, output_dir):
-
-    is_cif = pdb_path.split(".")[-1] == "cif"
 
     array = strucio.load_structure(pdb_path)
     residues = struc.get_residues(array)[0]
@@ -42,36 +36,19 @@ def split_pdb_by_ss(pdb_path, output_dir):
     os.makedirs(output_dir, exist_ok=True)
     pdb_path = pathlib.Path(pdb_path)
 
-    from Bio.PDB import MMCIFParser, MMCIFIO, Select
-
-    # class ResIDSelect(Select):
-    #     def __init__(self, res_ids):
-    #         self.res_ids = res_ids
-    #
-    #     def accept_residue(self, residue):
-    #         return residue.get_id()[1] in self.res_ids
-    #
-    # parser = MMCIFParser(QUIET=True) if is_cif else PDBParser()
-    # io = MMCIFIO()
-    # bio_st = parser.get_structure("target_pdb", pdb_path)
-    # io.set_structure(bio_st)
-    # io.save(os.path.join(output_dir, f"{pdb_path.stem}_ssA.cif"), ResIDSelect(a_res))
-    # io.save(os.path.join(output_dir, f"{pdb_path.stem}_ssB.cif"), ResIDSelect(b_res))
-    # io.save(os.path.join(output_dir, f"{pdb_path.stem}_ssC.cif"), ResIDSelect(c_res))
-
     strucio.save_structure(os.path.join(output_dir, f"{pdb_path.stem}_ssA.pdb"), arr_a)
     strucio.save_structure(os.path.join(output_dir, f"{pdb_path.stem}_ssB.pdb"), arr_b)
     strucio.save_structure(os.path.join(output_dir, f"{pdb_path.stem}_ssC.pdb"), arr_c)
 
 
-def gen_simu_map(file_path, res, output_path, densMap=None):
+def gen_simu_map(file_path, res, output_path, ref_dens_map=None):
     """
     The gen_simu_map function takes a PDB file and generates a simulated map from it.
 
     :param file_path: Specify the path to the pdb file
     :param res: Set the resolution of the simulated map
     :param output_path: Specify the path to where the simulated map will be saved
-    :param densMap: Specify a density map to use as a reference for output dimensions
+    :param ref_dens_map: Specify a density map to use as a reference for output dimensions
     :return: A simulated map based on a pdb file
     """
 
@@ -101,9 +78,9 @@ def gen_simu_map(file_path, res, output_path, densMap=None):
 
     if atom_count == 0:
         # handle no atoms in ss category
-        if densMap:
-            with mrcfile.open(densMap, permissive=True) as mrc:
-                # set all values to 0
+        if ref_dens_map:
+            # create new map with dimensions of ref_dens_map but all zero density values
+            with mrcfile.open(ref_dens_map, permissive=True) as mrc:
                 with mrcfile.new(output_path, overwrite=True) as mrc_new:
                     mrc_new.set_data(np.zeros(mrc.data.shape, dtype=np.float32))
                     mrc_new.voxel_size = mrc.voxel_size
@@ -120,19 +97,20 @@ def gen_simu_map(file_path, res, output_path, densMap=None):
         else:
             raise Exception("No atoms in PDB file and no density map specified.")
     else:
-        densMap = MapParser.readMRC(densMap) if densMap else None
-        sb = StructureBlurrer()
+        # ref_dens_map = MapParser.readMRC(ref_dens_map) if ref_dens_map else None
+        # sb = StructureBlurrer()
         pdb_path = os.path.abspath(file_path)
         # output_path = os.path.abspath(output_path)
-        if file_path.split(".")[-1] == "cif":
-            st = mmCIFParser.read_mmCIF_file(pdb_path, hetatm=True)
-        elif file_path.split(".")[-1] == "pdb":
-            st = PDBParser.read_PDB_file("pdb1", pdb_path)
-        else:
-            raise Exception("Make sure the input file is a PDB or mmCIF file.")
-        simu_map = sb.gaussian_blur_real_space(st, res, densMap=densMap)
-        simu_map.write_to_MRC_file(output_path)
-
+        # if file_path.split(".")[-1] == "cif":
+        #     st = mmCIFParser.read_mmCIF_file(pdb_path, hetatm=True)
+        # elif file_path.split(".")[-1] == "pdb":
+        #     st = PDBParser.read_PDB_file("pdb1", pdb_path)
+        # else:
+        #     raise Exception("Make sure the input file is a PDB or mmCIF file.")
+        # simu_map = sb.gaussian_blur_real_space(st, res, densMap=ref_dens_map)
+        # simu_map.write_to_MRC_file(output_path)
+        pdb2vol(pdb_path, output_path, res, ref_map=ref_dens_map)
+        assert os.path.exists(output_path), "Simulated map not generated."
 
 def gen_npy(pdb_path, sample_res, npy_path=None, verbose=False):
     if verbose:
@@ -155,7 +133,7 @@ def gen_npy(pdb_path, sample_res, npy_path=None, verbose=False):
 
     pdb_simu_map_path = os.path.join(tmp_dir, f"{pdb_stem}_simu_map.mrc")
 
-    gen_simu_map(pdb_path, sample_res, pdb_simu_map_path, densMap=None)
+    gen_simu_map(pdb_path, sample_res, pdb_simu_map_path, ref_dens_map=None)
 
     for file in os.listdir(pdb_dir):
         filename = str(pathlib.Path(file).stem)
@@ -164,7 +142,7 @@ def gen_npy(pdb_path, sample_res, npy_path=None, verbose=False):
                 os.path.join(pdb_dir, file),
                 sample_res,
                 os.path.join(simu_mrc_dir, filename + ".mrc"),
-                densMap=pdb_simu_map_path,
+                ref_dens_map=pdb_simu_map_path,
             )
 
     with mrcfile.open(pdb_simu_map_path) as mrc:
@@ -193,33 +171,17 @@ def gen_npy(pdb_path, sample_res, npy_path=None, verbose=False):
         print("Numpy array saved to: " + save_pth)
 
     if verbose:
-        print(arr.shape)
-        # print stats
-        print("Number in SS class Coil: ", np.count_nonzero(arr[..., 0]))
-        print("Number in SS class Beta: ", np.count_nonzero(arr[..., 1]))
-        print("Number in SS class Alpha: ", np.count_nonzero(arr[..., 2]))
-
+        print("size of array: ", arr.shape)
         # print min, max, mean, std
-        print(
-            "Coil: ",
-            np.min(arr[..., 0]),
-            np.max(arr[..., 0]),
-            np.mean(arr[..., 0]),
-            np.std(arr[..., 0]),
-        )
-        print(
-            "Beta: ",
-            np.min(arr[..., 1]),
-            np.max(arr[..., 1]),
-            np.mean(arr[..., 1]),
-            np.std(arr[..., 1]),
-        )
-        print(
-            "Alpha: ",
-            np.min(arr[..., 2]),
-            np.max(arr[..., 2]),
-            np.mean(arr[..., 2]),
-            np.std(arr[..., 2]),
-        )
+        for idx, ss_class in enumerate(["Coil", "Beta", "Alpha"]):
+            curr_arr = arr[..., idx]
+            print(
+                f"{ss_class}: ",
+                "Count: ", np.count_nonzero(curr_arr),
+                "Min: ", np.min(curr_arr),
+                "Max: ", np.max(curr_arr),
+                "Mean: ", np.mean(curr_arr),
+                "Std: ", np.std(curr_arr),
+            )
 
     return arr

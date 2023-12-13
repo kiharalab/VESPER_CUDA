@@ -99,18 +99,7 @@ if __name__ == "__main__":
     if args.b.split(".")[-1] == "pdb" or args.b.split(".")[-1] == "cif":
         assert args.res is not None, "Please specify resolution when using structure as input."
         # simulate the map at target resolution
-        from TEMPy.protein.structure_blurrer import StructureBlurrer
-        from TEMPy.protein.structure_parser import PDBParser, mmCIFParser
-
         sim_map_path = os.path.join(tempfile.gettempdir(), "simu_map.mrc")
-        # sb = StructureBlurrer()
-        # if args.b.split(".")[-1] == "pdb":
-        #     structure = PDBParser.read_PDB_file("PDB1", args.b, hetatm=False, water=False)
-        # elif args.b.split(".")[-1] == "cif":
-        #     structure = mmCIFParser.read_mmCIF_file(args.b, hetatm=True)
-        # else:
-        #     raise Exception("Only PDB and mmCIF files are supported for structure input.")
-        # sim_map = sb.gaussian_blur_real_space(prot=structure, resolution=args.res)
         pdb2vol(args.b, sim_map_path, args.res)
         # sim_map.write_to_MRC_file(sim_map_path)
         assert os.path.exists(sim_map_path), "Failed to create simulated map from structure."
