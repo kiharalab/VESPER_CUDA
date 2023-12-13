@@ -3,12 +3,12 @@ import os
 from enum import Enum
 import sys
 import time
-
+import tempfile
 import numpy as np
 
 from fitter import MapFitter
 from map import EMmap, unify_dims
-
+from utils.pdb2vol import pdb2vol
 
 class Mode(Enum):
     V = "VecProduct"
@@ -71,7 +71,7 @@ if __name__ == "__main__":
         type=float,
         default=0.5,
         required=False,
-        help="The weighting parameter for secondary structure in score mixing def=0.0",
+        help="The weighting parameter for secondary structure in score mixing def=0.5",
     )
     ss.add_argument("-t", type=float, default=0.0, help="Threshold of density map1")
     ss.add_argument("-T", type=float, default=0.0, help="Threshold of density map2")
@@ -95,33 +95,34 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     tgt_ss = None
-
+    # check if the second input is a structure file
     if args.b.split(".")[-1] == "pdb" or args.b.split(".")[-1] == "cif":
         assert args.res is not None, "Please specify resolution when using structure as input."
         # simulate the map at target resolution
         from TEMPy.protein.structure_blurrer import StructureBlurrer
         from TEMPy.protein.structure_parser import PDBParser, mmCIFParser
 
-        sb = StructureBlurrer()
-        if args.b.split(".")[-1] == "pdb":
-            structure = PDBParser.read_PDB_file("PDB1", args.b, hetatm=False, water=False)
-        elif args.b.split(".")[-1] == "cif":
-            structure = mmCIFParser.read_mmCIF_file(args.b, hetatm=True)
-        else:
-            raise Exception("Only PDB and mmCIF files are supported for structure input.")
-        sim_map = sb.gaussian_blur_real_space(prot=structure, resolution=args.res)
-        os.makedirs("tmp_data", exist_ok=True)
-        sim_map.write_to_MRC_file("tmp_data/simu_map.mrc")
-        assert os.path.exists("tmp_data/simu_map.mrc"), "Failed to create simulated map from structure."
-        # set args.b to the simu map
-        if args.command == "ss":
-            if args.res is None:
-                raise ValueError("Please specify resolution when using structure as input.")
-            from ssutils.pdb2ss import gen_npy
+        sim_map_path = os.path.join(tempfile.gettempdir(), "simu_map.mrc")
+        # sb = StructureBlurrer()
+        # if args.b.split(".")[-1] == "pdb":
+        #     structure = PDBParser.read_PDB_file("PDB1", args.b, hetatm=False, water=False)
+        # elif args.b.split(".")[-1] == "cif":
+        #     structure = mmCIFParser.read_mmCIF_file(args.b, hetatm=True)
+        # else:
+        #     raise Exception("Only PDB and mmCIF files are supported for structure input.")
+        # sim_map = sb.gaussian_blur_real_space(prot=structure, resolution=args.res)
+        pdb2vol(args.b, sim_map_path, args.res)
+        # sim_map.write_to_MRC_file(sim_map_path)
+        assert os.path.exists(sim_map_path), "Failed to create simulated map from structure."
 
+        # generate secondary structure assignment for the simulated map if using ss mode
+        if args.command == "ss":
+            from ssutils.pdb2ss import gen_npy
             print("Generating secondary structure assignment for input structure...")
             tgt_ss = gen_npy(args.b, args.res, verbose=True)
-        args.b = "tmp_data/simu_map.mrc"
+
+        # set args.b to the simu map path
+        args.b = sim_map_path
 
     assert os.path.exists(args.a), "Reference map not found, please check -a option"
     assert os.path.exists(args.b), "Target map not found, please check -b option"
@@ -135,13 +136,11 @@ if __name__ == "__main__":
 
         torch.set_grad_enabled(False)
         if not torch.cuda.is_available():
-            # print("GPU is specified but CUDA is not available.")
-            # exit(1)
             raise ValueError("GPU is specified but CUDA is not available.")
         else:
             # set up torch cuda device
-            os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-            os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
+            # os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+            # os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
             device = torch.device(f"cuda:{gpu_id}")
             print(f"Using GPU {gpu_id} for CUDA acceleration. GPU Name: {torch.cuda.get_device_name(gpu_id)}")
     else:
