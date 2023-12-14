@@ -4,13 +4,11 @@ import shutil
 import tempfile
 
 import mrcfile
-import numpy as np
 # from TEMPy.maps.map_parser import MapParser
 # from TEMPy.protein.structure_blurrer import StructureBlurrer
 # from TEMPy.protein.structure_parser import PDBParser, mmCIFParser
 from utils.pdb2vol import pdb2vol
 import gemmi
-import pydssp
 
 
 # import biotite.structure.io as strucio
@@ -165,15 +163,6 @@ def split_pdb_by_ss(pdb_path, output_dir):
     io.save(os.path.join(output_dir, f"{pdb_path.stem}_ssC.cif"), ResidueSelect(res_c))
 
 
-def split_st_by_ss(st_path, out_dir):
-    if st_path.split(".")[-1] == "cif":
-        split_cif_by_ss(st_path, out_dir)
-    elif st_path.split(".")[-1] == "pdb":
-        split_pdb_by_ss(st_path, out_dir)
-    else:
-        raise Exception("Make sure the input file is a PDB or mmCIF file.")
-
-
 def gen_simu_map(file_path, res, output_path, ref_dens_map=None):
     """
     The gen_simu_map function takes a PDB file and generates a simulated map from it.
@@ -263,7 +252,12 @@ def gen_npy(pdb_path, sample_res, npy_path=None, verbose=False):
     os.makedirs(pdb_dir, exist_ok=True)
     os.makedirs(simu_mrc_dir, exist_ok=True)
 
-    split_st_by_ss(pdb_path, pdb_dir)
+    if pdb_path.split(".")[-1] == "cif":
+        split_cif_by_ss(pdb_path, pdb_dir)
+    elif pdb_path.split(".")[-1] == "pdb":
+        split_pdb_by_ss(pdb_path, pdb_dir)
+    else:
+        raise Exception("Make sure the input file is a PDB or mmCIF file.")
 
     pdb_simu_map_path = os.path.join(tmp_dir, f"{pdb_stem}_simu_map.mrc")
 
