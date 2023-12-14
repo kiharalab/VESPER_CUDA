@@ -9,6 +9,7 @@ import numpy as np
 from fitter import MapFitter
 from map import EMmap, unify_dims
 from utils.pdb2vol import pdb2vol
+from utils.segmap import segment_map
 
 class Mode(Enum):
     V = "VecProduct"
@@ -93,6 +94,11 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
+
+    # preprocess input map to reduce size
+    temp_ref_map = os.path.join(tempfile.gettempdir(), "ref_map.mrc")
+    segment_map(args.a, temp_ref_map, args.t)
+    args.a = temp_ref_map
 
     tgt_ss = None
     # check if the second input is a structure file
