@@ -107,7 +107,6 @@ if __name__ == "__main__":
         # simulate the map at target resolution
         sim_map_path = os.path.join(tempfile.gettempdir(), "simu_map.mrc")
         pdb2vol(args.b, sim_map_path, args.res)
-        # sim_map.write_to_MRC_file(sim_map_path)
         assert os.path.exists(sim_map_path), "Failed to create simulated map from structure."
 
         # generate secondary structure assignment for the simulated map if using ss mode
@@ -155,8 +154,8 @@ if __name__ == "__main__":
         print(" ".join(sys.argv))
 
         print("### Input Params Summary ###")
-        print("Reference Map Path: ", args.a)
-        print("Target Map Path: ", args.b)
+        print("Reference Map Path: ", os.path.abspath(args.a))
+        print("Target Map Path: ", os.path.abspath(args.b))
         print("Threshold of Reference Map: ", args.t)
         print("Threshold of Target Map: ", args.T)
         print("Bandwidth of the Gaussian filter: ", args.g)
@@ -168,18 +167,18 @@ if __name__ == "__main__":
         print("Show topN models in PDB format: ", args.S)
         print("Number of threads to use: ", args.c)
         if args.o:
-            print("Output folder: ", args.o)
+            print("Output folder: ", os.path.abspath(args.o))
         if args.gpu:
             print("Using GPU ID: ", args.gpu)
         if not args.pdbin or not os.path.exists(args.pdbin):
             print("No input PDB file, skipping transformation")
             args.pdbin = None
         else:
-            print("Transform PDB file: ", args.pdbin)
+            print("Transform PDB file: ", os.path.abspath(args.pdbin))
         if args.ca and args.ldp and os.path.exists(args.ca) and os.path.exists(args.ldp):
             print("LDP Recall Reranking Enabled")
-            print("LDP PDB file: ", args.ldp)
-            print("Backbone PDB file: ", args.ca)
+            print("LDP PDB file: ", os.path.abspath(args.ldp))
+            print("Backbone PDB file: ", os.path.abspath(args.ca))
         else:
             print("LDP Recall Reranking Disabled")
         if args.al is not None:
@@ -239,11 +238,11 @@ if __name__ == "__main__":
         from ssutils.pdb2ss import gen_npy
 
         print("### Input Params Summary ###")
-        print("Reference Map Path: ", args.a)
-        print("Target Map Path: ", args.b)
-        print("Reference Map Secondary Structure Path: ", args.npa)
+        print("Reference Map Path: ", os.path.abspath(args.a))
+        print("Target Map Path: ", os.path.abspath(args.b))
+        print("Reference Map Secondary Structure Path: ", os.path.abspath(args.npa))
         if args.npb:
-            print("Target Map Secondary Structure Path: ", args.npb)
+            print("Target Map Secondary Structure Path: ", os.path.abspath(args.npb))
         elif args.b.endswith(".pdb") or args.b.endswith(".cif"):
             print("Target Map Secondary Structure Path: ", "Assigned from input structure")
         print("Threshold of Reference Map: ", args.t)
@@ -256,14 +255,14 @@ if __name__ == "__main__":
         print("Remove duplicates: ", args.nodup)
         print("Number of threads to use: ", args.c)
         if args.o:
-            print("Output folder: ", args.o)
+            print("Output folder: ", os.path.abspath(args.o))
         if args.gpu:
             print("Using GPU ID: ", args.gpu)
         if not args.pdbin or not os.path.exists(args.pdbin):
             print("No input PDB file, skipping transformation")
             args.pdbin = None
         else:
-            print("Transform PDB file: ", args.pdbin)
+            print("Transform PDB file: ", os.path.abspath(args.pdbin))
 
         start_check = time.time()
 
