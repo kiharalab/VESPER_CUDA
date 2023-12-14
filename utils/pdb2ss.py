@@ -130,10 +130,13 @@ def split_pdb_by_ss(pdb_path, output_dir):
 
     for res in residues:
         curr_res_coords = []
+        curr_atom_types = set()
         for atom in res:
             if atom.name in ["N", "CA", "C", "O"]:
                 curr_res_coords.append(np.array(atom.coord))
-        residue_coords_list.append(np.array(curr_res_coords))
+                curr_atom_types = curr_atom_types | {atom.name}
+        if len(curr_res_coords) == 4 and curr_atom_types == {"N", "CA", "C", "O"}:
+            residue_coords_list.append(np.array(curr_res_coords))
     residue_coords = np.array(residue_coords_list)
 
     dssp = pydssp.assign(residue_coords, out_type="c3")
