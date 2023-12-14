@@ -31,10 +31,10 @@ def get_atom_list(pdb_file):
         - list: A list of atom types.
     """
     if pdb_file.endswith(".pdb"):
-        parser = PDBParser(QUIET=True)
+        st_parser = PDBParser(QUIET=True)
     elif pdb_file.endswith(".cif"):
-        parser = MMCIFParser(QUIET=True)
-    structure = parser.get_structure("protein", pdb_file)
+        st_parser = MMCIFParser(QUIET=True)
+    structure = st_parser.get_structure("protein", pdb_file)
     atom_list = []
     atom_type_list = []
     for atom in structure.get_atoms():

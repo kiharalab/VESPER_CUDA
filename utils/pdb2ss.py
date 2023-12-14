@@ -9,6 +9,10 @@ import numpy as np
 # from TEMPy.protein.structure_blurrer import StructureBlurrer
 # from TEMPy.protein.structure_parser import PDBParser, mmCIFParser
 from utils.pdb2vol import pdb2vol
+import gemmi
+import pydssp
+
+
 # import biotite.structure.io as strucio
 # import biotite.structure as struc
 
@@ -40,10 +44,15 @@ from utils.pdb2vol import pdb2vol
 #     strucio.save_structure(os.path.join(output_dir, f"{pdb_path.stem}_ssB.pdb"), arr_b)
 #     strucio.save_structure(os.path.join(output_dir, f"{pdb_path.stem}_ssC.pdb"), arr_c)
 
-def split_cif_by_ss(cif_path, output_dir):
-    import gemmi
-    import pydssp
 
+def split_cif_by_ss(cif_path, output_dir):
+    """
+    Split the CIF file by secondary structure and save the resulting structures as separate CIF files.
+
+    Args:
+        cif_path (str): The path to the input CIF file.
+        output_dir (str): The directory where the output CIF files will be saved.
+    """
     cif_data_block = gemmi.cif.read(cif_path).sole_block()
     structure = gemmi.make_structure_from_block(cif_data_block)[0]
     residue_coords_list = []
@@ -93,16 +102,27 @@ def split_cif_by_ss(cif_path, output_dir):
     doc_A = st_a.make_mmcif_document(groups)
     doc_B = st_b.make_mmcif_document(groups)
     doc_C = st_c.make_mmcif_document(groups)
-    doc_A.write_file(output_dir + "/A_a.cif")
-    doc_B.write_file(output_dir + "/A_b.cif")
-    doc_C.write_file(output_dir + "/A_c.cif")
+
+    pdb_path = pathlib.Path(cif_path)
+
+    doc_A.write_file(os.path.join(output_dir, f"{pdb_path.stem}_ssA.cif"))
+    doc_B.write_file(os.path.join(output_dir, f"{pdb_path.stem}_ssB.cif"))
+    doc_C.write_file(os.path.join(output_dir, f"{pdb_path.stem}_ssC.cif"))
+
+
+import pydssp
+from Bio.PDB import PDBParser, Select, MMCIFIO
+import numpy as np
 
 
 def split_pdb_by_ss(pdb_path, output_dir):
-    import pydssp
-    from Bio.PDB import PDBParser, Select, MMCIFIO
-    import numpy as np
+    """
+    Split a PDB file by secondary structure and save the resulting structures as CIF files.
 
+    Args:
+        pdb_path (str): Path to the PDB file.
+        output_dir (str): Directory to save the resulting CIF files.
+    """
     parser = PDBParser()
     structure = parser.get_structure("PDB1", pdb_path)
     residues = list(structure.get_residues())
@@ -112,7 +132,6 @@ def split_pdb_by_ss(pdb_path, output_dir):
         curr_res_coords = []
         for atom in res:
             if atom.name in ["N", "CA", "C", "O"]:
-                # print(atom.name, atom.coord)
                 curr_res_coords.append(np.array(atom.coord))
         residue_coords_list.append(np.array(curr_res_coords))
     residue_coords = np.array(residue_coords_list)
@@ -137,9 +156,10 @@ def split_pdb_by_ss(pdb_path, output_dir):
                 return False
 
     io.set_structure(structure)
-    io.save(output_dir + "/A_a.cif", ResidueSelect(res_a))
-    io.save(output_dir + "/A_b.cif", ResidueSelect(res_b))
-    io.save(output_dir + "/A_c.cif", ResidueSelect(res_c))
+    pdb_path = pathlib.Path(pdb_path)
+    io.save(os.path.join(output_dir, f"{pdb_path.stem}_ssA.cif"), ResidueSelect(res_a))
+    io.save(os.path.join(output_dir, f"{pdb_path.stem}_ssB.cif"), ResidueSelect(res_b))
+    io.save(os.path.join(output_dir, f"{pdb_path.stem}_ssC.cif"), ResidueSelect(res_c))
 
 
 def split_st_by_ss(st_path, out_dir):
