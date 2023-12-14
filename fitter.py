@@ -819,7 +819,7 @@ class MapFitter:
 
             # set the rotation center
             cent = 0.5 * float(dim)
-            cent = torch.tensor(cent, device=device, dtype=torch.float32)
+            cent = torch.tensor(cent, device=device, dtype=torch.float32, requires_grad=False)
 
             # get relative new positions from center
             new_pos = new_pos_grid - cent
@@ -829,10 +829,10 @@ class MapFitter:
             old_pos = new_pos @ mtx + cent
 
             # round old positions to nearest integer
-            old_pos = torch.round(old_pos)
+            old_pos.round_()
 
             # init new vec and dens array
-            new_data_array = torch.zeros_like(data, device=device, dtype=torch.float32)
+            new_data_array = torch.zeros_like(data, device=device, dtype=torch.float32, requires_grad=False)
 
             in_bound_mask = torch.all((old_pos >= 0) & (old_pos < dim), axis=1)
 
@@ -847,7 +847,7 @@ class MapFitter:
 
             # get corresponding new positions
             # new_pos = (new_pos[in_bound_mask][non_zero_mask] + cent).long()
-            new_pos = (new_pos[in_bound_mask] + cent).long()
+            new_pos = new_pos[in_bound_mask].add_(cent).long()
 
             # fill new density entries
             new_data_array[new_pos[:, 0], new_pos[:, 1], new_pos[:, 2]] = data[
@@ -855,7 +855,7 @@ class MapFitter:
             ]
 
             if ss_mix_score_mode:
-                new_ss_array = torch.zeros_like(tgt_map_ss_data, device=device, dtype=torch.float32)
+                new_ss_array = torch.zeros_like(tgt_map_ss_data, device=device, dtype=torch.float32, requires_grad=False)
                 new_ss_array[new_pos[:, 0], new_pos[:, 1], new_pos[:, 2]] = tgt_map_ss_data[
                     valid_old_pos[:, 0], valid_old_pos[:, 1], valid_old_pos[:, 2]
                 ]
@@ -863,7 +863,7 @@ class MapFitter:
                 new_ss_array = None
 
             if rot_vec:
-                new_vec_array = torch.zeros_like(vec, device=device, dtype=torch.float32)
+                new_vec_array = torch.zeros_like(vec, device=device, dtype=torch.float32, requires_grad=False)
                 # fetch and rotate the vectors
                 non_zero_vecs = vec[valid_old_pos[:, 0], valid_old_pos[:, 1], valid_old_pos[:, 2]]
 
