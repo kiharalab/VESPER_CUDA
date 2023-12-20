@@ -17,6 +17,5 @@ dependencies:
   - scikit-learn
   - pip:
       - biopython
-      - BioTEMPy
-      - biotite
+      - pydssp
       - gemmi
