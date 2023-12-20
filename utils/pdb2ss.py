@@ -1,44 +1,166 @@
 import os
 import pathlib
 import shutil
+import tempfile
 
 import mrcfile
-import numpy as np
 # from TEMPy.maps.map_parser import MapParser
 # from TEMPy.protein.structure_blurrer import StructureBlurrer
 # from TEMPy.protein.structure_parser import PDBParser, mmCIFParser
 from utils.pdb2vol import pdb2vol
-import biotite.structure.io as strucio
-import biotite.structure as struc
+import gemmi
+
+
+# import biotite.structure.io as strucio
+# import biotite.structure as struc
+
+
+# def split_pdb_by_ss(pdb_path, output_dir):
+#     array = strucio.load_structure(pdb_path)
+#     residues = struc.get_residues(array)[0]
+#     sse = struc.annotate_sse(array)
+#
+#     # get res ids for each ss class
+#     a_res = residues[sse == "a"]
+#     b_res = residues[sse == "b"]
+#     c_res = residues[sse == "c"]
+#
+#     # create ss mask by residue id
+#     a_mask = [(True if res_id in a_res else False) for res_id in array.res_id]
+#     b_mask = [(True if res_id in b_res else False) for res_id in array.res_id]
+#     c_mask = [(True if res_id in c_res else False) for res_id in array.res_id]
+#
+#     # apply mask to array
+#     arr_a = array[a_mask]
+#     arr_b = array[b_mask]
+#     arr_c = array[c_mask]
+#
+#     os.makedirs(output_dir, exist_ok=True)
+#     pdb_path = pathlib.Path(pdb_path)
+#
+#     strucio.save_structure(os.path.join(output_dir, f"{pdb_path.stem}_ssA.pdb"), arr_a)
+#     strucio.save_structure(os.path.join(output_dir, f"{pdb_path.stem}_ssB.pdb"), arr_b)
+#     strucio.save_structure(os.path.join(output_dir, f"{pdb_path.stem}_ssC.pdb"), arr_c)
+
+
+def split_cif_by_ss(cif_path, output_dir):
+    """
+    Split the CIF file by secondary structure and save the resulting structures as separate CIF files.
+
+    Args:
+        cif_path (str): The path to the input CIF file.
+        output_dir (str): The directory where the output CIF files will be saved.
+    """
+    cif_data_block = gemmi.cif.read(cif_path).sole_block()
+    structure = gemmi.make_structure_from_block(cif_data_block)[0]
+    residue_coords_list = []
+    residue_list = []
+    for chain in structure:
+        for residue in chain:
+            curr_res_coords = []
+            curr_atom_types = set()
+            for atom in residue:
+                if atom.name in ["N", "CA", "C", "O"]:
+                    curr_res_coords.append(np.array((atom.pos.x, atom.pos.y, atom.pos.z)))
+                    curr_atom_types = curr_atom_types | {atom.name}
+            if len(curr_res_coords) == 4 and curr_atom_types == {"N", "CA", "C", "O"}:
+                residue_coords_list.append(np.array(curr_res_coords))
+                residue_list.append(residue)
+    residue_coords = np.array(residue_coords_list)
+    dssp = pydssp.assign(residue_coords, out_type="c3")
+
+    st_a = gemmi.Structure()
+    st_b = gemmi.Structure()
+    st_c = gemmi.Structure()
+    model_a = gemmi.Model("0")
+    model_b = gemmi.Model("0")
+    model_c = gemmi.Model("0")
+    chain_a = gemmi.Chain("ssA")
+    chain_b = gemmi.Chain("ssB")
+    chain_c = gemmi.Chain("ssC")
+
+    # save cif files
+    for res, ss in zip(residue_list, dssp):
+        if ss == "H":
+            chain_a.add_residue(res)
+        elif ss == "E":
+            chain_b.add_residue(res)
+        elif ss == "-":
+            chain_c.add_residue(res)
+
+    model_a.add_chain(chain_a)
+    model_b.add_chain(chain_b)
+    model_c.add_chain(chain_c)
+    st_a.add_model(model_a)
+    st_b.add_model(model_b)
+    st_c.add_model(model_c)
+
+    groups = gemmi.MmcifOutputGroups(True)
+    groups.group_pdb = True
+    doc_A = st_a.make_mmcif_document(groups)
+    doc_B = st_b.make_mmcif_document(groups)
+    doc_C = st_c.make_mmcif_document(groups)
+
+    pdb_path = pathlib.Path(cif_path)
+
+    doc_A.write_file(os.path.join(output_dir, f"{pdb_path.stem}_ssA.cif"))
+    doc_B.write_file(os.path.join(output_dir, f"{pdb_path.stem}_ssB.cif"))
+    doc_C.write_file(os.path.join(output_dir, f"{pdb_path.stem}_ssC.cif"))
+
+
+import pydssp
+from Bio.PDB import PDBParser, Select, MMCIFIO
+import numpy as np
 
 
 def split_pdb_by_ss(pdb_path, output_dir):
+    """
+    Split a PDB file by secondary structure and save the resulting structures as CIF files.
 
-    array = strucio.load_structure(pdb_path)
-    residues = struc.get_residues(array)[0]
-    sse = struc.annotate_sse(array)
+    Args:
+        pdb_path (str): Path to the PDB file.
+        output_dir (str): Directory to save the resulting CIF files.
+    """
+    parser = PDBParser()
+    structure = parser.get_structure("PDB1", pdb_path)
+    residues = list(structure.get_residues())
+    residue_coords_list = []
 
-    # get res ids for each ss class
-    a_res = residues[sse == "a"]
-    b_res = residues[sse == "b"]
-    c_res = residues[sse == "c"]
+    for res in residues:
+        curr_res_coords = []
+        curr_atom_types = set()
+        for atom in res:
+            if atom.name in ["N", "CA", "C", "O"]:
+                curr_res_coords.append(np.array(atom.coord))
+                curr_atom_types = curr_atom_types | {atom.name}
+        if len(curr_res_coords) == 4 and curr_atom_types == {"N", "CA", "C", "O"}:
+            residue_coords_list.append(np.array(curr_res_coords))
+    residue_coords = np.array(residue_coords_list)
 
-    # create ss mask by residue id
-    a_mask = [(True if res_id in a_res else False) for res_id in array.res_id]
-    b_mask = [(True if res_id in b_res else False) for res_id in array.res_id]
-    c_mask = [(True if res_id in c_res else False) for res_id in array.res_id]
+    dssp = pydssp.assign(residue_coords, out_type="c3")
 
-    # apply mask to array
-    arr_a = array[a_mask]
-    arr_b = array[b_mask]
-    arr_c = array[c_mask]
+    res_a = [res for res, ss in zip(residues, dssp) if ss == "H"]
+    res_b = [res for res, ss in zip(residues, dssp) if ss == "E"]
+    res_c = [res for res, ss in zip(residues, dssp) if ss == "-"]
 
-    os.makedirs(output_dir, exist_ok=True)
+    # save pdb files
+    io = MMCIFIO()
+
+    class ResidueSelect(Select):
+        def __init__(self, res_list):
+            self.res_list = res_list
+
+        def accept_residue(self, res):
+            if res in self.res_list:
+                return True
+            else:
+                return False
+
+    io.set_structure(structure)
     pdb_path = pathlib.Path(pdb_path)
-
-    strucio.save_structure(os.path.join(output_dir, f"{pdb_path.stem}_ssA.pdb"), arr_a)
-    strucio.save_structure(os.path.join(output_dir, f"{pdb_path.stem}_ssB.pdb"), arr_b)
-    strucio.save_structure(os.path.join(output_dir, f"{pdb_path.stem}_ssC.pdb"), arr_c)
+    io.save(os.path.join(output_dir, f"{pdb_path.stem}_ssA.cif"), ResidueSelect(res_a))
+    io.save(os.path.join(output_dir, f"{pdb_path.stem}_ssB.cif"), ResidueSelect(res_b))
+    io.save(os.path.join(output_dir, f"{pdb_path.stem}_ssC.cif"), ResidueSelect(res_c))
 
 
 def gen_simu_map(file_path, res, output_path, ref_dens_map=None):
@@ -112,13 +234,14 @@ def gen_simu_map(file_path, res, output_path, ref_dens_map=None):
         pdb2vol(pdb_path, output_path, res, ref_map=ref_dens_map)
         assert os.path.exists(output_path), "Simulated map not generated."
 
+
 def gen_npy(pdb_path, sample_res, npy_path=None, verbose=False):
     if verbose:
         print("Combining MRC files into a Numpy array...")
 
     # get stem of pdb file
     pdb_stem = str(pathlib.Path(pdb_path).stem)
-    tmp_dir = f"./tmp_data/{pdb_stem}/"
+    tmp_dir = f"./{tempfile.gettempdir()}/{pdb_stem}/"
     if os.path.exists(tmp_dir):
         shutil.rmtree(tmp_dir)
     os.makedirs(tmp_dir, exist_ok=True)
@@ -129,7 +252,12 @@ def gen_npy(pdb_path, sample_res, npy_path=None, verbose=False):
     os.makedirs(pdb_dir, exist_ok=True)
     os.makedirs(simu_mrc_dir, exist_ok=True)
 
-    split_pdb_by_ss(pdb_path, pdb_dir)
+    if pdb_path.split(".")[-1] == "cif":
+        split_cif_by_ss(pdb_path, pdb_dir)
+    elif pdb_path.split(".")[-1] == "pdb":
+        split_pdb_by_ss(pdb_path, pdb_dir)
+    else:
+        raise Exception("Make sure the input file is a PDB or mmCIF file.")
 
     pdb_simu_map_path = os.path.join(tmp_dir, f"{pdb_stem}_simu_map.mrc")
 

@@ -1,4 +1,4 @@
-### pdb2vol.py adopted from BioTEMPy
+# pdb2vol.py adopted from BioTEMPy
 
 from Bio.PDB import PDBParser, MMCIFParser
 import numpy as np
@@ -31,10 +31,10 @@ def get_atom_list(pdb_file):
         - list: A list of atom types.
     """
     if pdb_file.endswith(".pdb"):
-        parser = PDBParser(QUIET=True)
+        st_parser = PDBParser(QUIET=True)
     elif pdb_file.endswith(".cif"):
-        parser = MMCIFParser(QUIET=True)
-    structure = parser.get_structure("protein", pdb_file)
+        st_parser = MMCIFParser(QUIET=True)
+    structure = st_parser.get_structure("protein", pdb_file)
     atom_list = []
     atom_type_list = []
     for atom in structure.get_atoms():
@@ -52,26 +52,22 @@ def calculate_centre_of_mass(atom_list, atom_type_list):
         atom_type_list (list): List of atom types.
 
     Returns:
-        tuple: The coordinates of the centre of mass in the form (x_CoM, y_CoM, z_CoM).
+        tuple: The coordinates of the centre of mass in the form (x_co_m, y_co_m, z_co_m).
     """
-    x_CoM = 0.0
-    y_CoM = 0.0
-    z_CoM = 0.0
-    massTotal = 0.0
-    for atom, atom_type in zip(atom_list, atom_type_list):
-        x, y, z = atom
-        m = atom_mass_dict.get(atom_type, 0.0)
-        x_CoM += x * m
-        y_CoM += y * m
-        z_CoM += z * m
-        massTotal += m
-    x_CoM /= massTotal
-    y_CoM /= massTotal
-    z_CoM /= massTotal
-    return x_CoM, y_CoM, z_CoM
+    atom_list = np.array(atom_list)
+    atom_type_list = np.array(atom_type_list)
+    x = atom_list[:, 0]
+    y = atom_list[:, 1]
+    z = atom_list[:, 2]
+    m = np.array([atom_mass_dict.get(atom_type, 0.0) for atom_type in atom_type_list])
+    mass_total = np.sum(m)
+    x_co_m = np.sum(x * m) / mass_total
+    y_co_m = np.sum(y * m) / mass_total
+    z_co_m = np.sum(z * m) / mass_total
+    return x_co_m, y_co_m, z_co_m
 
 
-def protMap(
+def prot2map(
     atom_list,
     atom_type_list,
     voxel_size,
@@ -307,7 +303,7 @@ def pdb2vol(input_pdb, output_mrc, resolution, ref_map=False, sigma_coeff=0.356,
     if not ref_map:
         r = np.clip(resolution / 4.0, a_min=1.0, a_max=3.5)
         voxel_size = np.array([r, r, r])
-        dims, origin = protMap(atoms, types, voxel_size, resolution)
+        dims, origin = prot2map(atoms, types, voxel_size, resolution)
     else:
         with mrcfile.open(ref_map, permissive=True) as mrc:
             voxel_size = np.array([mrc.voxel_size.x, mrc.voxel_size.y, mrc.voxel_size.z])
