@@ -111,7 +111,7 @@ if __name__ == "__main__":
 
         # generate secondary structure assignment for the simulated map if using ss mode
         if args.command == "ss":
-            from ssutils.pdb2ss import gen_npy
+            from utils.pdb2ss import gen_npy
             print("Generating secondary structure assignment for input structure...")
             tgt_ss = gen_npy(args.b, args.res, verbose=True)
 
@@ -235,7 +235,7 @@ if __name__ == "__main__":
 
     elif args.command == "ss":
 
-        from ssutils.pdb2ss import gen_npy
+        from utils.pdb2ss import gen_npy
 
         print("### Input Params Summary ###")
         print("Reference Map Path: ", os.path.abspath(args.a))
