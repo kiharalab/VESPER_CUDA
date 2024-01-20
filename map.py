@@ -132,6 +132,21 @@ class EMmap:
         """
         src_dims = np.array((self.xdim, self.ydim, self.zdim))
 
+        new_pos = np.array(np.meshgrid(np.arange(self.new_dim),
+                                       np.arange(self.new_dim),
+                                       np.arange(self.new_dim),
+                                       )).T.reshape(-1, 3)
+
+        old_pos = (new_pos * self.new_width + self.new_orig - self.orig) / self.xwidth
+
+        # check if the old_pos is in bound of the original map
+        in_bound_mask = np.all((old_pos >= 0) & (old_pos < src_dims), axis=1)
+        in_bound_old_pos = old_pos[in_bound_mask].astype(np.int64)
+        non_zero_mask = np.nonzero(self.data[in_bound_old_pos[:, 0], in_bound_old_pos[:, 1], in_bound_old_pos[:, 2]])
+        in_bound_and_non_zero_old_pos = in_bound_old_pos[non_zero_mask]
+        in_bound_and_non_zero_new_pos = new_pos[in_bound_mask][non_zero_mask]
+
+
         res_data, res_vec, res_ss_data = do_resample_and_vec(
             self.xwidth,
             self.orig,
@@ -142,6 +157,8 @@ class EMmap:
             self.new_dim,
             dreso,
             self.ss_data,
+            in_bound_and_non_zero_old_pos,
+            in_bound_and_non_zero_new_pos,
         )
 
         # calculate map statistics
@@ -172,7 +189,7 @@ class EMmap:
                 )
         else:
             res_ss_data = None
-        # update the dest object with the new data and vectors
+            # update the dest object with the new data and vectors
         self.new_data = res_data
         self.vec = res_vec
         self.new_ss_data = res_ss_data
@@ -202,42 +219,168 @@ def unify_dims(map_list, voxel_size):
             em_map.new_orig = em_map.new_cent - 0.5 * voxel_size * max_dim
 
 
-@jit(nopython=True)
-def calc(stp, endp, pos, data, fsiv):
-    """Mean shift algorithm using Gaussian filter to sample data in original MRC density map"""
-    dtotal = 0.0
-    pos2 = np.zeros((3,))
-
-    for xp in range(stp[0], endp[0]):
-        rx = float(xp) - pos[0]
-        rx = rx**2
-        for yp in range(stp[1], endp[1]):
-            ry = float(yp) - pos[1]
-            ry = ry**2
-            for zp in range(stp[2], endp[2]):
-                rz = float(zp) - pos[2]
-                rz = rz**2
-                d2 = rx + ry + rz
-                v = data[xp][yp][zp] * np.exp(-1.5 * d2 * fsiv)
-                dtotal += v
-                pos2[0] += v * xp
-                pos2[1] += v * yp
-                pos2[2] += v * zp
-
-    return dtotal, pos2
+# @jit(nopython=True, nogil=True)
+# def calc(stp, endp, pos, data, fsiv):
+#     """Mean shift algorithm using Gaussian filter to sample data in original MRC density map"""
+#     dtotal = 0.0
+#     pos2 = np.zeros((3,))
+#
+#     for xp in range(stp[0], endp[0]):
+#         rx = float(xp) - pos[0]
+#         rx = rx ** 2
+#         for yp in range(stp[1], endp[1]):
+#             ry = float(yp) - pos[1]
+#             ry = ry ** 2
+#             for zp in range(stp[2], endp[2]):
+#                 rz = float(zp) - pos[2]
+#                 rz = rz ** 2
+#                 d2 = rx + ry + rz
+#                 v = data[xp, yp, zp] * np.exp(-1.5 * d2 * fsiv)
+#                 dtotal += v
+#                 pos2 += np.array((xp, yp, zp)) * v
+#     return dtotal, pos2
 
 
-@jit(nopython=True)
+@jit(nopython=True, nogil=True)
+def calc(stp, endp, pos, mrc1_data, fsiv, calc_vector=True):
+    """Vectorized version of calc"""
+
+    xx = np.arange(stp[0], endp[0], 1)
+    yy = np.arange(stp[1], endp[1], 1)
+    zz = np.arange(stp[2], endp[2], 1)
+
+    xx = np.expand_dims(xx, axis=1)
+    xx = np.expand_dims(xx, axis=1)
+    yy = np.expand_dims(yy, axis=1)
+    yy = np.expand_dims(yy, axis=0)
+    zz = np.expand_dims(zz, axis=0)
+    zz = np.expand_dims(zz, axis=0)
+
+    # calculate the distance between the center of the voxel and the center of the particle
+    d2 = (xx - pos[0])**2 + (yy - pos[1])**2 + (zz - pos[2])**2
+
+    # calculate the density and vector in resized map using Gaussian interpolation in original MRC density map
+    d = np.exp(-1.5 * d2 * fsiv) * mrc1_data[stp[0]:endp[0], stp[1]:endp[1], stp[2]:endp[2]]
+    dtotal = np.sum(d)
+
+    if calc_vector:
+        # calculate the vector
+        pos2 = np.array([np.sum(d * xx), np.sum(d * yy), np.sum(d * zz)])
+
+        pos2 = pos2 / dtotal
+
+        v = (pos2 - pos) / np.sqrt(np.sum((pos2 - pos)**2))
+    else:
+        v = None
+
+    return dtotal, v
+
+
+# @jit(nopython=True, nogil=True)
+# def do_resample_and_vec(
+#         src_xwidth,
+#         src_orig,
+#         src_dims,
+#         src_data,
+#         dest_xwidth,
+#         dest_orig,
+#         new_dim,
+#         dreso,
+#         ss_data,
+# ):
+#     """
+#     The do_resample_and_vec function takes in the following parameters:
+#         src_xwidth - The width of the source map.
+#         src_orig - The origin of the source map.
+#         src_dims - The dimensions of the source map.
+#         src_data - A array contains the density data. The shape of the array is (xdim, ydim, zdim).
+#
+#     :param src_xwidth: Calculate the grid step
+#     :param src_orig: Define the origin of the source volume
+#     :param src_dims: Determine the size of the source volume
+#     :param src_data: Data of the source volume
+#     :param dest_xwidth: Determine the size of the new grid
+#     :param dest_orig: Define the origin of the destination volume
+#     :param new_dim: Determine the size of the new volume
+#     :param dreso: Determine the Guassian filter size
+#     :param ss_data: data of the secondary structure
+#     :param : Determine the resolution of the new map
+#     :return: The density map, the unit vectors and the secondary structure data
+#     """
+#
+#     gstep = src_xwidth
+#     fs = (dreso / gstep) * 0.5
+#     fs = fs ** 2
+#     fsiv = 1.0 / fs
+#     fmaxd = (dreso / gstep) * 2.0
+#     print("#maxd=", fmaxd)
+#     print("#fsiv=", fsiv)
+#
+#     dest_vec = np.zeros((new_dim, new_dim, new_dim, 3), dtype="float32")
+#     dest_data = np.zeros((new_dim, new_dim, new_dim), dtype="float32")
+#     dest_ss_data = np.zeros((new_dim, new_dim, new_dim, 4), dtype="float32")
+#
+#     for x in range(new_dim):
+#         for y in range(new_dim):
+#             for z in range(new_dim):
+#
+#                 xyz_arr = np.array((x, y, z))
+#                 pos = (xyz_arr * dest_xwidth + dest_orig - src_orig) / src_xwidth
+#
+#                 # check density
+#                 if not (0 <= pos[0] < src_dims[0] and 0 <= pos[1] < src_dims[1] and 0 <= pos[2] < src_dims[2]):
+#                     continue
+#
+#                 pos = np.round(pos).astype(np.int64)
+#
+#                 if np.isclose(src_data[pos[0], pos[1], pos[2]], 0.0):
+#                     continue
+#
+#                 stp = np.maximum(pos - fmaxd, 0).astype(np.int32)
+#                 endp = np.minimum(pos + fmaxd + 1, src_dims).astype(np.int32)
+#
+#                 # compute the total density
+#                 dtotal, pos2 = calc(stp, endp, pos, src_data, fsiv)
+#
+#                 if ss_data is not None:
+#                     for i in range(4):
+#                         dest_ss_data[x, y, z, i], _ = calc(stp, endp, pos, ss_data[..., i], fsiv)
+#
+#                 if np.isclose(dtotal, 0.0):  # check for infinitesimal density due to numerical error
+#                     continue
+#
+#                 dest_data[x, y, z] = dtotal
+#
+#                 rd = 1.0 / dtotal
+#
+#                 pos2 *= rd
+#
+#                 tmpcd = pos2 - pos
+#
+#                 dvec = np.sqrt(np.sum(tmpcd ** 2))
+#
+#                 if dvec == 0:
+#                     dvec = 1.0
+#
+#                 rdvec = 1.0 / dvec
+#
+#                 dest_vec[x, y, z] = tmpcd * rdvec
+#
+#     return dest_data, dest_vec, dest_ss_data
+
+@jit(nopython=True, nogil=True)
 def do_resample_and_vec(
-    src_xwidth,
-    src_orig,
-    src_dims,
-    src_data,
-    dest_xwidth,
-    dest_orig,
-    new_dim,
-    dreso,
-    ss_data,
+        src_xwidth,
+        src_orig,
+        src_dims,
+        src_data,
+        dest_xwidth,
+        dest_orig,
+        new_dim,
+        dreso,
+        ss_data,
+        old_pos_list,
+        new_pos_list,
 ):
     """
     The do_resample_and_vec function takes in the following parameters:
@@ -261,7 +404,7 @@ def do_resample_and_vec(
 
     gstep = src_xwidth
     fs = (dreso / gstep) * 0.5
-    fs = fs**2
+    fs = fs ** 2
     fsiv = 1.0 / fs
     fmaxd = (dreso / gstep) * 2.0
     print("#maxd=", fmaxd)
@@ -271,76 +414,28 @@ def do_resample_and_vec(
     dest_data = np.zeros((new_dim, new_dim, new_dim), dtype="float32")
     dest_ss_data = np.zeros((new_dim, new_dim, new_dim, 4), dtype="float32")
 
-    for x in range(new_dim):
-        for y in range(new_dim):
-            for z in range(new_dim):
+    for new_pos, old_pos in zip(new_pos_list, old_pos_list):
+        stp = np.maximum(old_pos - fmaxd, 0).astype(np.int32)
+        endp = np.minimum(old_pos + fmaxd + 1, src_dims).astype(np.int32)
 
-                xyz_arr = np.array((x, y, z))
-                pos = (xyz_arr * dest_xwidth + dest_orig - src_orig) / src_xwidth
+        # compute the total density
+        dtotal, v = calc(stp, endp, old_pos, src_data, fsiv)
 
-                # check density
+        if ss_data is not None:
+            dest_ss_data[new_pos[0], new_pos[1], new_pos[2], 0], _ = calc(stp, endp, old_pos, ss_data[..., 0], fsiv, False)
+            dest_ss_data[new_pos[0], new_pos[1], new_pos[2], 1], _ = calc(stp, endp, old_pos, ss_data[..., 1], fsiv, False)
+            dest_ss_data[new_pos[0], new_pos[1], new_pos[2], 2], _ = calc(stp, endp, old_pos, ss_data[..., 2], fsiv, False)
+            dest_ss_data[new_pos[0], new_pos[1], new_pos[2], 3], _ = calc(stp, endp, old_pos, ss_data[..., 3], fsiv, False)
 
-                if (
-                    pos[0] < 0
-                    or pos[1] < 0
-                    or pos[2] < 0
-                    or pos[0] >= src_dims[0]
-                    or pos[1] >= src_dims[1]
-                    or pos[2] >= src_dims[2]
-                ):
-                    continue
+        if np.isclose(dtotal, 0.0):
+            continue
 
-                if src_data[int(pos[0])][int(pos[1])][int(pos[2])] == 0:
-                    continue
-
-                # Start Point
-                stp = (pos - fmaxd).astype(np.int32)
-
-                # set start and end point
-                if stp[0] < 0:
-                    stp[0] = 0
-                if stp[1] < 0:
-                    stp[1] = 0
-                if stp[2] < 0:
-                    stp[2] = 0
-
-                # End Point
-                endp = (pos + fmaxd + 1).astype(np.int32)
-
-                if endp[0] >= src_dims[0]:
-                    endp[0] = src_dims[0]
-                if endp[1] >= src_dims[1]:
-                    endp[1] = src_dims[1]
-                if endp[2] >= src_dims[2]:
-                    endp[2] = src_dims[2]
-
-                # compute the total density
-                dtotal, pos2 = calc(stp, endp, pos, src_data, fsiv)
-
-                if ss_data is not None:
-                    dest_ss_data[x][y][z][0], _ = calc(stp, endp, pos, ss_data[..., 0], fsiv)
-                    dest_ss_data[x][y][z][1], _ = calc(stp, endp, pos, ss_data[..., 1], fsiv)
-                    dest_ss_data[x][y][z][2], _ = calc(stp, endp, pos, ss_data[..., 2], fsiv)
-                    dest_ss_data[x][y][z][3], _ = calc(stp, endp, pos, ss_data[..., 3], fsiv)
-
-                if np.isclose(dtotal, 0.0):  # check for infinitesimal density due to numerical error
-                    continue
-
-                dest_data[x][y][z] = dtotal
-
-                rd = 1.0 / dtotal
-
-                pos2 *= rd
-
-                tmpcd = pos2 - pos
-
-                dvec = np.sqrt(tmpcd[0] ** 2 + tmpcd[1] ** 2 + tmpcd[2] ** 2)
-
-                if dvec == 0:
-                    dvec = 1.0
-
-                rdvec = 1.0 / dvec
-
-                dest_vec[x][y][z] = tmpcd * rdvec
+        dest_data[new_pos[0], new_pos[1], new_pos[2]] = dtotal
+        # tmpcd = pos2 / dtotal - old_pos
+        # dvec = np.sqrt(np.sum(tmpcd ** 2))
+        # if dvec == 0:
+        #     dvec = 1.0
+        # dest_vec[new_pos[0], new_pos[1], new_pos[2]] = tmpcd / dvec
+        dest_vec[new_pos[0], new_pos[1], new_pos[2]] = v
 
     return dest_data, dest_vec, dest_ss_data
