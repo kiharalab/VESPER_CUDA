@@ -215,8 +215,8 @@ def unify_dims(map_list, voxel_size):
     max_dim = np.max(dims)
     for em_map in map_list:
         em_map.new_dim = max_dim
-        if em_map.xdim != max_dim:
-            em_map.new_orig = em_map.new_cent - 0.5 * voxel_size * max_dim
+        em_map.new_orig = em_map.new_cent - 0.5 * voxel_size * max_dim
+
 
 
 # @jit(nopython=True, nogil=True)

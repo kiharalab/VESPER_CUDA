@@ -97,10 +97,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # preprocess input map to reduce size
-    temp_unified_ref_map = os.path.join(tempfile.gettempdir(), "unified_ref_map.mrc")
-    unify_ref_map = unify_map(args.a, temp_unified_ref_map)
-    seg_ref_map = segment_map(unify_ref_map, os.path.join(tempfile.gettempdir(), "segment_ref_map.mrc"), args.t)
-    args.a = seg_ref_map
+    # temp_unified_ref_map = os.path.join(tempfile.gettempdir(), "unified_ref_map.mrc")
+    # unify_ref_map = unify_map(args.a, temp_unified_ref_map)
+    # seg_ref_map = segment_map(unify_ref_map, os.path.join(tempfile.gettempdir(), "segment_ref_map.mrc"), args.t)
+    # args.a = seg_ref_map
 
     tgt_ss = None
     # check if the second input is a structure file
