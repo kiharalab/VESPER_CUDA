@@ -102,12 +102,18 @@ if __name__ == "__main__":
     # seg_ref_map = segment_map(unify_ref_map, os.path.join(tempfile.gettempdir(), "segment_ref_map.mrc"), args.t)
     # args.a = seg_ref_map
 
+    import random
+    import string
+
+    # generate random string for temp folder
+    rand_str = "".join(random.choices(string.ascii_letters + string.digits, k=8))
+
     tgt_ss = None
     # check if the second input is a structure file
     if args.b.split(".")[-1] == "pdb" or args.b.split(".")[-1] == "cif":
         assert args.res is not None, "Please specify resolution when using structure as input."
         # simulate the map at target resolution
-        sim_map_path = os.path.join(tempfile.gettempdir(), "simu_map.mrc")
+        sim_map_path = os.path.join(tempfile.gettempdir(), f"simu_map_{rand_str}.mrc")
         pdb2vol(args.b, sim_map_path, args.res)
         assert os.path.exists(sim_map_path), "Failed to create simulated map from structure."
 
