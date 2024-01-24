@@ -199,6 +199,8 @@ if __name__ == "__main__":
         if args.ca:
             assert os.path.exists(args.ca), "CA file not found, please check -ca option"
 
+        start_time = time.time()
+
         # construct mrc objects
         ref_map = EMmap(args.a)
         tgt_map = EMmap(args.b)
@@ -216,6 +218,11 @@ if __name__ == "__main__":
         print("\n###Processing Target Map Resampling###")
         tgt_map.resample_and_vec(dreso=args.g)
         print()
+
+        end_resample = time.time()
+        print(f"Resample time: {end_resample - start_time:.2f} s")
+
+        exit(0)
 
         # set mrc output path
         trans_mrc_path = args.b if args.mrcout else None
