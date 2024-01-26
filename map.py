@@ -423,16 +423,22 @@ def do_resample_and_vec(
         right_padding = np.where((old_pos + fmaxd + 1) >= src_dims, (old_pos + fmaxd + 1) - src_dims, 0).astype(
             np.int32)
 
-        stp = np.maximum(old_pos - fmaxd, 0).astype(np.int32)
-        endp = np.minimum(old_pos + fmaxd + 1, src_dims).astype(np.int32)
+        stp = np.maximum(old_pos - fmaxd, 0).astype(np.int64)
+        endp = np.minimum(old_pos + fmaxd + 1, src_dims).astype(np.int64)
+
+        # make sure the kernel is the same size as the data
+        endp = endp + np.where(endp - stp == np.array(kernel.shape), 0, np.array(kernel.shape) - (endp - stp))
+
+        orig_dens = src_data[stp[0]:endp[0], stp[1]:endp[1], stp[2]:endp[2]]
+
+        # print(stp, endp, left_padding, right_padding, orig_dens.shape)
 
         # pad density data if needed
         padded_data = np.zeros_like(kernel, dtype=np.float32)
         padded_data[
         left_padding[0]:padded_data.shape[0] - right_padding[0],
         left_padding[1]:padded_data.shape[1] - right_padding[1],
-        left_padding[2]:padded_data.shape[2] - right_padding[2]] = src_data[stp[0]:endp[0], stp[1]:endp[1],
-                                                                   stp[2]:endp[2]]
+        left_padding[2]:padded_data.shape[2] - right_padding[2]] = orig_dens
 
         # compute the total density
         d = padded_data * kernel

@@ -12,6 +12,7 @@ from utils.pdb2vol import pdb2vol
 from utils.segmap import segment_map
 from utils.unify import unify_map
 
+
 class Mode(Enum):
     V = "VecProduct"
     O = "Overlap"
@@ -44,15 +45,16 @@ if __name__ == "__main__":
         type=str,
         default="V",
         help="V: vector product mode (default)\n"
-        + "O: overlap mode\n"
-        + "C: Cross Correlation Coefficient Mode\n"
-        + "P: Pearson Correlation Coefficient Mode\n"
-        + "L: Laplacian Filtering Mode",
+             + "O: overlap mode\n"
+             + "C: Cross Correlation Coefficient Mode\n"
+             + "P: Pearson Correlation Coefficient Mode\n"
+             + "L: Laplacian Filtering Mode",
     )
     orig.add_argument("-E", type=bool, default=False, help="Evaluation mode of the current position def=false")
     orig.add_argument("-o", type=str, default=None, help="Output folder name")
     orig.add_argument("-gpu", type=int, help="GPU ID to use for CUDA acceleration def=0")
-    orig.add_argument("-nodup", action="store_true", default=False, help="Remove duplicate models using heuristics def=false")
+    orig.add_argument("-nodup", action="store_true", default=False,
+                      help="Remove duplicate models using heuristics def=false")
     orig.add_argument("-ldp", type=str, default=None, help="Path to the local dense point file def=None")
     orig.add_argument("-ca", type=str, default=None, help="Path to the CA file def=None")
     orig.add_argument("-pdbin", type=str, default=None, help="Input PDB file to be transformed def=None")
@@ -60,7 +62,8 @@ if __name__ == "__main__":
     orig.add_argument("-c", type=int, default=2, help="Number of threads to use def=2")
     orig.add_argument("-al", type=float, default=None, help="Angle limit for searching def=None")
     orig.add_argument(
-        "-res", type=float, default=None, help="Resolution of the experimental map used to create simulated map from structure"
+        "-res", type=float, default=None,
+        help="Resolution of the experimental map used to create simulated map from structure"
     )
 
     # secondary structure matching menu
@@ -77,21 +80,24 @@ if __name__ == "__main__":
     )
     ss.add_argument("-t", type=float, default=0.0, help="Threshold of density map1")
     ss.add_argument("-T", type=float, default=0.0, help="Threshold of density map2")
-    ss.add_argument("-g", type=float, default=16.0, help="Bandwidth of the Gaussian filter def=16.0, sigma = 0.5*[value entered]")
+    ss.add_argument("-g", type=float, default=16.0,
+                    help="Bandwidth of the Gaussian filter def=16.0, sigma = 0.5*[value entered]")
     ss.add_argument("-s", type=float, default=7.0, help="Sampling voxel spacing def=7.0")
     ss.add_argument("-A", type=float, default=30.0, help="Sampling angle spacing def=30.0")
     ss.add_argument("-N", type=int, default=10, help="Refine Top [int] models def=10")
     ss.add_argument("-S", action="store_true", default=False, help="Show topN models in PDB format def=false")
     ss.add_argument("-E", type=bool, default=False, help="Evaluation mode of the current position def=false")
     ss.add_argument("-o", type=str, default=None, help="Output folder name")
-    ss.add_argument("-nodup", action="store_true", default=False, help="Remove duplicate models using heuristics def=false")
+    ss.add_argument("-nodup", action="store_true", default=False,
+                    help="Remove duplicate models using heuristics def=false")
     # prob.add_argument("-B", type=float, default=8.0, help="Bandwidth of the Gaussian filter for probability values def=8.0")
     # prob.add_argument("-R", type=float, default=0.0, help="Threshold for probability values def=0.0")
     ss.add_argument("-gpu", type=int, help="GPU ID to use for CUDA acceleration def=0")
     ss.add_argument("-pdbin", type=str, default=None, help="Input PDB file to be transformed def=None")
     ss.add_argument("-c", type=int, default=2, help="Number of threads to use def=2")
     ss.add_argument(
-        "-res", type=float, default=None, help="Resolution of the experimental map used to create simulated map from structure"
+        "-res", type=float, default=None,
+        help="Resolution of the experimental map used to create simulated map from structure"
     )
 
     args = parser.parse_args()
@@ -120,6 +126,7 @@ if __name__ == "__main__":
         # generate secondary structure assignment for the simulated map if using ss mode
         if args.command == "ss":
             from utils.pdb2ss import gen_npy
+
             print("Generating secondary structure assignment for input structure...")
             tgt_ss = gen_npy(args.b, args.res, verbose=True)
 
@@ -201,6 +208,8 @@ if __name__ == "__main__":
 
         start_time = time.time()
 
+        start_resample = time.time()
+
         # construct mrc objects
         ref_map = EMmap(args.a)
         tgt_map = EMmap(args.b)
@@ -221,8 +230,6 @@ if __name__ == "__main__":
 
         end_resample = time.time()
         print(f"Resample time: {end_resample - start_time:.2f} s")
-
-        exit(0)
 
         # set mrc output path
         trans_mrc_path = args.b if args.mrcout else None
