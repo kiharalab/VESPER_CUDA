@@ -398,7 +398,7 @@ def do_resample_and_vec(src_xwidth, src_dims, src_data, new_dim, dreso, ss_data,
 
         orig_dens = src_data[stp[0]:endp[0], stp[1]:endp[1], stp[2]:endp[2]]
 
-        print(stp, endp, left_padding, right_padding, kernel.shape, orig_dens.shape)
+        # print(stp, endp, left_padding, right_padding, kernel.shape, orig_dens.shape)
 
         # pad density data if needed
         padded_data = np.zeros_like(kernel, dtype=np.float32)
