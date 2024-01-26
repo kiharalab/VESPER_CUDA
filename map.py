@@ -364,9 +364,9 @@ def do_resample_and_vec(src_xwidth, src_dims, src_data, new_dim, dreso, ss_data,
     else:
         dest_ss_data = None
 
-    center = fmaxd
+    center = np.ceil(fmaxd)
 
-    # construct the kernel based on distance to the center
+    # construct the kernel based on distance to the center, size = 2 * center + 1
 
     xx = np.arange(-center, center + 1, 1)
     yy = np.arange(-center, center + 1, 1)
@@ -387,21 +387,18 @@ def do_resample_and_vec(src_xwidth, src_dims, src_data, new_dim, dreso, ss_data,
     for new_pos, old_pos in zip(new_pos_list, old_pos_list):
 
         old_pos = np.rint(old_pos)
-        fmaxd = np.rint(fmaxd)
+        fmaxd = np.ceil(fmaxd)
 
-        left_padding = np.where((old_pos - fmaxd) < 0, np.abs(old_pos - fmaxd), 0).astype(np.int32)
+        left_padding = np.where((old_pos - fmaxd) < 0, np.abs(old_pos - fmaxd), 0).astype(np.int64)
         right_padding = np.where((old_pos + fmaxd + 1) >= src_dims, (old_pos + fmaxd + 1) - src_dims, 0).astype(
-            np.int32)
+            np.int64)
 
-        stp = np.maximum(old_pos - fmaxd, 0).astype(np.int64)
-        endp = np.minimum(old_pos + fmaxd + 1, src_dims).astype(np.int64)
-
-        # make sure the kernel is the same size as the data
-        endp = endp + np.where(endp - stp == np.array(kernel.shape), 0, np.array(kernel.shape) - (endp - stp))
+        stp = np.floor(np.maximum(old_pos - fmaxd, 0)).astype(np.int64)
+        endp = np.ceil(np.minimum(old_pos + fmaxd + 1, src_dims)).astype(np.int64)
 
         orig_dens = src_data[stp[0]:endp[0], stp[1]:endp[1], stp[2]:endp[2]]
 
-        # print(stp, endp, left_padding, right_padding, orig_dens.shape)
+        print(stp, endp, left_padding, right_padding, kernel.shape, orig_dens.shape)
 
         # pad density data if needed
         padded_data = np.zeros_like(kernel, dtype=np.float32)
@@ -434,6 +431,7 @@ def do_resample_and_vec(src_xwidth, src_dims, src_data, new_dim, dreso, ss_data,
         dest_data[new_pos[0], new_pos[1], new_pos[2]] = dtotal
         dest_vec[new_pos[0], new_pos[1], new_pos[2]] = v
 
-        progress_proxy.update(1)
+        if progress_proxy is not None:
+            progress_proxy.update(1)
 
     return dest_data, dest_vec, dest_ss_data
