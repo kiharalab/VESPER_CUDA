@@ -3,6 +3,7 @@ import copy
 import mrcfile
 import numpy as np
 from numba import njit
+from numba_progress import ProgressBar
 
 
 class EMmap:
@@ -148,31 +149,11 @@ class EMmap:
         in_bound_and_non_zero_old_pos = in_bound_old_pos[non_zero_mask]
         in_bound_and_non_zero_new_pos = new_pos[in_bound_mask][non_zero_mask]
 
-        res_data, res_vec, res_ss_data = do_resample_and_vec(
-            self.xwidth,
-            self.orig,
-            src_dims,
-            self.data,
-            self.new_width,
-            self.new_orig,
-            self.new_dim,
-            dreso,
-            self.ss_data,
-            in_bound_and_non_zero_old_pos,
-            in_bound_and_non_zero_new_pos,
-        )
-
-        # res_data, res_vec, res_ss_data = do_resample_and_vec(
-        #     self.xwidth,
-        #     self.orig,
-        #     src_dims,
-        #     self.data,
-        #     self.new_width,
-        #     self.new_orig,
-        #     self.new_dim,
-        #     dreso,
-        #     self.ss_data,
-        # )
+        with ProgressBar(total=len(in_bound_and_non_zero_old_pos)) as progress:
+            res_data, res_vec, res_ss_data = do_resample_and_vec(self.xwidth, src_dims, self.data, self.new_dim, dreso,
+                                                                 self.ss_data, in_bound_and_non_zero_old_pos,
+                                                                 in_bound_and_non_zero_new_pos,
+                                                                 progress_proxy=progress)
 
         # calculate map statistics
         density_sum = np.sum(res_data)
@@ -346,19 +327,8 @@ def unify_dims(map_list, voxel_size):
 #     return dest_data, dest_vec, dest_ss_data
 
 @njit(nogil=True, boundscheck=False, fastmath=True)
-def do_resample_and_vec(
-        src_xwidth,
-        src_orig,
-        src_dims,
-        src_data,
-        dest_xwidth,
-        dest_orig,
-        new_dim,
-        dreso,
-        ss_data,
-        old_pos_list,
-        new_pos_list,
-):
+def do_resample_and_vec(src_xwidth, src_dims, src_data, new_dim, dreso, ss_data, old_pos_list, new_pos_list,
+                        progress_proxy=None):
     """
     The do_resample_and_vec function takes in the following parameters:
         src_xwidth - The width of the source map.
@@ -384,8 +354,8 @@ def do_resample_and_vec(
     fs = fs ** 2
     fsiv = 1.0 / fs
     fmaxd = (dreso / gstep) * 2.0
-    print("#maxd=", fmaxd)
-    print("#fsiv=", fsiv)
+    # print("#maxd=", fmaxd)
+    # print("#fsiv=", fsiv)
 
     dest_vec = np.zeros((new_dim, new_dim, new_dim, 3), dtype="float32")
     dest_data = np.zeros((new_dim, new_dim, new_dim), dtype="float32")
@@ -412,7 +382,7 @@ def do_resample_and_vec(
     d2 = xx ** 2 + yy ** 2 + zz ** 2
     kernel = np.exp(-1.5 * d2 * fsiv).astype(np.float32)
 
-    print("#kernel voxel size=", kernel.shape)
+    # print("#kernel voxel size=", kernel.shape)
 
     for new_pos, old_pos in zip(new_pos_list, old_pos_list):
 
@@ -463,5 +433,7 @@ def do_resample_and_vec(
 
         dest_data[new_pos[0], new_pos[1], new_pos[2]] = dtotal
         dest_vec[new_pos[0], new_pos[1], new_pos[2]] = v
+
+        progress_proxy.update(1)
 
     return dest_data, dest_vec, dest_ss_data
