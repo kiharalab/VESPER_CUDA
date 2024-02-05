@@ -7,7 +7,7 @@ import TEMPy.math.vector as Vector
 import os
 
 
-def save_rotated_pdb(input_pdb, rot_mtx, real_trans, save_path):
+def save_rotated_pdb(input_pdb, rot_mtx, real_trans, save_path, model_num):
     pdbio = PDBIO()
     # check input file format
     parser = None
@@ -23,6 +23,16 @@ def save_rotated_pdb(input_pdb, rot_mtx, real_trans, save_path):
 
     pdbio.set_structure(structure)
     pdbio.save(save_path)
+
+    # add model number
+    with open(save_path, "r") as f:
+        lines = f.readlines()
+
+    with open(save_path, "w") as f:
+        f.write(f"MODEL        {model_num}\n")
+        for line in lines:
+            f.write(line)
+        f.write("ENDMDL\n")
 
 
 def save_rotated_mrc(mrc_path, rot_vec, real_trans, save_path):

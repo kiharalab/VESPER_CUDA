@@ -463,7 +463,7 @@ class MapFitter:
             angle_str = f"rx{int(item['angle'][0])}_ry{int(item['angle'][1])}_rz{int(item['angle'][2])}"
             trans_str = f"tx{item['real_trans'][0]:.3f}_ty{item['real_trans'][1]:.3f}_tz{item['real_trans'][2]:.3f}"
             filename = f"#{i}_{angle_str}_{trans_str}.pdb"
-            save_rotated_pdb(self.input_pdb, rot_mtx, item["real_trans"], os.path.join(self.outdir, "PDB", filename))
+            save_rotated_pdb(self.input_pdb, rot_mtx, item["real_trans"], os.path.join(self.outdir, "PDB", filename), i)
 
     def _save_topn_vec_as_pdb(self):
         os.makedirs(os.path.join(self.outdir, "VEC"), exist_ok=True)
