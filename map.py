@@ -155,6 +155,12 @@ class EMmap:
                                                                  in_bound_and_non_zero_new_pos,
                                                                  progress_proxy=progress)
 
+        # remove nan values
+        res_data[np.isnan(res_data)] = 0.0
+        res_vec[np.isnan(res_vec)] = 0.0
+        if self.ss_data is not None:
+            res_ss_data[np.isnan(res_ss_data)] = 0.0
+
         # calculate map statistics
         density_sum = np.sum(res_data)
         count = np.count_nonzero(res_data)
