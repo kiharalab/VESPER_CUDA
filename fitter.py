@@ -156,8 +156,8 @@ class MapFitter:
             backbone_ca = []
             with open(backbone_path) as f:
                 for line in f:
-                    if line.startswith("ATOM") and line[12:16].strip() == "CA":  # only CA atoms
-                        # if tokens[0] == "ATOM": # all atoms
+                    # filter only CA and P atoms for protein and nucleotide backbone
+                    if line.startswith("ATOM") and (line[12:16].strip() == "CA" or line[12:16].strip() == "P"):
                         backbone_ca.append(np.array((float(line[30:38]), float(line[38:46]), float(line[46:54]))))
 
             assert len(backbone_ca) > 0, "No CA atoms found in backbone file."
