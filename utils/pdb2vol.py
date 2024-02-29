@@ -96,10 +96,10 @@ def calculate_centre_of_mass(atom_list, atom_type_list):
 
 
 def prot2map(
-    atom_list,
-    atom_type_list,
-    voxel_size,
-    resolution=None,
+        atom_list,
+        atom_type_list,
+        voxel_size,
+        resolution=None,
 ):
     """
     Calculate the size and origin of a protein map based on the given atom list,
@@ -169,9 +169,16 @@ def mapGridPosition(origin, voxel_size, box_size, atom_coord):
 
     If the atom is outside the voxel grid, returns (0, 0, 0).
     """
-    x_pos = int(round((atom_coord[0] - origin[0]) / voxel_size[0], 0))
-    y_pos = int(round((atom_coord[1] - origin[1]) / voxel_size[1], 0))
-    z_pos = int(round((atom_coord[2] - origin[2]) / voxel_size[2], 0))
+
+    # NN interpolation
+    # x_pos = int(round((atom_coord[0] - origin[0]) / voxel_size[0], 0))
+    # y_pos = int(round((atom_coord[1] - origin[1]) / voxel_size[1], 0))
+    # z_pos = int(round((atom_coord[2] - origin[2]) / voxel_size[2], 0))
+
+    # No interpolation
+    x_pos = (atom_coord[0] - origin[0]) / voxel_size[0]
+    y_pos = (atom_coord[1] - origin[1]) / voxel_size[1]
+    z_pos = (atom_coord[2] - origin[2]) / voxel_size[2]
 
     if (box_size[2] > x_pos >= 0) and (box_size[1] > y_pos >= 0) and (box_size[0] > z_pos >= 0):
         return x_pos, y_pos, z_pos
@@ -198,7 +205,28 @@ def make_atom_overlay_map(origin, voxel_size, box_size, atom_list, atom_type_lis
     for atom, atom_type in zip(atom_list, atom_type_list):
         pos = mapGridPosition(origin, voxel_size, box_size, atom)
         if pos:
-            map_data[pos[2], pos[1], pos[0]] += atom_mass_dict.get(atom_type, 0.0)
+            atom_mass = atom_mass_dict.get(atom_type, 0.0)
+            pos_x_0 = int(np.floor(pos[0]))
+            pos_y_0 = int(np.floor(pos[1]))
+            pos_z_0 = int(np.floor(pos[2]))
+            pos_x_1 = pos_x_0 + 1
+            pos_y_1 = pos_y_0 + 1
+            pos_z_1 = pos_z_0 + 1
+
+            a = pos_x_1 - pos[0]
+            b = pos_y_1 - pos[1]
+            c = pos_z_1 - pos[2]
+
+            # Trilinear interpolation to surrounding vertices
+            map_data[pos_z_0, pos_y_0, pos_x_0] += a * b * c * atom_mass
+            map_data[pos_z_1, pos_y_0, pos_x_0] += a * b * (1 - c) * atom_mass
+            map_data[pos_z_0, pos_y_1, pos_x_0] += a * (1 - b) * c * atom_mass
+            map_data[pos_z_0, pos_y_0, pos_x_1] += (1 - a) * b * c * atom_mass
+            map_data[pos_z_1, pos_y_1, pos_x_0] += a * (1 - b) * (1 - c) * atom_mass
+            map_data[pos_z_0, pos_y_1, pos_x_1] += (1 - a) * (1 - b) * c * atom_mass
+            map_data[pos_z_1, pos_y_0, pos_x_1] += (1 - a) * b * (1 - c) * atom_mass
+            map_data[pos_z_1, pos_y_1, pos_x_1] += (1 - a) * (1 - b) * (1 - c) * atom_mass
+
     return map_data
 
 
@@ -280,7 +308,7 @@ def normalize_map(map_data):
 
 def resample_by_box_size(data, box_size):
     """
-    Resamples the given data array to match the specified box size using spline interpolation.
+    Resamples the given data array to match the specified box size using cubic spline interpolation.
 
     Parameters:
         data (ndarray): The input data array.
@@ -295,17 +323,17 @@ def resample_by_box_size(data, box_size):
 
 
 def pdb2vol(
-    input_pdb,
-    resolution,
-    output_mrc=None,
-    ref_map=False,
-    sigma_coeff=0.356,
-    real_space=False,
-    normalize=True,
-    backbone_only=False,
-    contour=False,
-    bin_mask=False,
-    return_data=False,
+        input_pdb,
+        resolution,
+        output_mrc=None,
+        ref_map=False,
+        sigma_coeff=0.356,
+        real_space=False,
+        normalize=True,
+        backbone_only=False,
+        contour=False,
+        bin_mask=False,
+        return_data=False,
 ):
     """
     Convert a PDB or CIF file to a volumetric map in MRC format.
@@ -356,13 +384,22 @@ def pdb2vol(
     y_s = int(dims[1] * voxel_size[1])
     z_s = int(dims[0] * voxel_size[0])
 
-    new_voxel_size = np.array([voxel_size[2] * dims[2] / x_s, voxel_size[1] * dims[1] / y_s, voxel_size[0] * dims[0] / z_s])
+    new_voxel_size = np.array(
+        [voxel_size[2] * dims[2] / x_s, voxel_size[1] * dims[1] / y_s, voxel_size[0] * dims[0] / z_s])
+
+    # print(new_voxel_size)
 
     map_data = make_atom_overlay_map(origin, new_voxel_size, (z_s, y_s, x_s), atoms, types, atom_mass_dict)
-    if real_space:
-        blurred_data = blur_map_real_space(map_data, resolution, sigma_coeff)
+
+    if resolution * sigma_coeff / new_voxel_size[0] >= 1:
+        if real_space:
+            blurred_data = blur_map_real_space(map_data, resolution, sigma_coeff)
+        else:
+            blurred_data = blur_map(map_data, resolution, sigma_coeff)
     else:
-        blurred_data = blur_map(map_data, resolution, sigma_coeff)
+        print("Warning: Blurring will not be performed because the resolution is too high w.r.t. the voxel size.")
+        blurred_data = map_data  # no blurring
+
     blurred_data = resample_by_box_size(blurred_data, dims)
 
     if normalize:
@@ -391,10 +428,14 @@ if __name__ == "__main__":
     parser.add_argument("output_mrc", help="Path to save the output MRC file.")
     parser.add_argument("-m", "--ref_map", help="Path to a reference map in MRC format.", default=None)
     parser.add_argument("-s", "--sigma_coeff", type=float, default=0.356, help="Sigma coefficient for blurring.")
-    parser.add_argument("-r", "--real_space", action="store_true", default=False, help="Whether to perform real-space blurring.")
-    parser.add_argument("-n", "--normalize", action="store_true", default=True, help="Whether to normalize the output map.")
-    parser.add_argument("-bb", "--backbone_only", action="store_true", default=False, help="Whether to only consider backbone atoms.")
-    parser.add_argument("-b", "--bin_mask", action="store_true", default=False, help="Whether to binarize the output map.")
+    parser.add_argument("-r", "--real_space", action="store_true", default=False,
+                        help="Whether to perform real-space blurring.")
+    parser.add_argument("-n", "--normalize", action="store_true", default=True,
+                        help="Whether to normalize the output map.")
+    parser.add_argument("-bb", "--backbone_only", action="store_true", default=False,
+                        help="Whether to only consider backbone atoms.")
+    parser.add_argument("-b", "--bin_mask", action="store_true", default=False,
+                        help="Whether to binarize the output map.")
     parser.add_argument("-c", "--contour", type=float, default=0.0, help="Contour level for contouring the output map.")
     args = parser.parse_args()
 
