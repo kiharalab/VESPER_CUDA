@@ -86,8 +86,10 @@ def get_atom_list(pdb_file, backbone_only=False):
                         res_type = "nuc"
     else:
         for atom in structure.get_atoms():
-            atom_list.append(atom.get_coord())
-            atom_type_list.append(atom.element)
+            # do not include hetero atoms and water
+            if atom.get_full_id()[3][0][0] == " ":
+                atom_list.append(atom.get_coord())
+                atom_type_list.append(atom.element)
     return np.array(atom_list), atom_type_list
 
 
