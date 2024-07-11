@@ -25,6 +25,7 @@ atom_mass_dict = Dict()
 
 atom_mass_dict["H"] = 1.008
 atom_mass_dict["C"] = 12.011
+atom_mass_dict["CA"] = 12.011  # for PDB files without element notations
 atom_mass_dict["N"] = 14.007
 atom_mass_dict["O"] = 15.999
 atom_mass_dict["P"] = 30.974
@@ -64,13 +65,15 @@ def get_atom_list(pdb_file, backbone_only=False):
         for model in structure:
             for chain in model:
                 for residue in chain:
-                    if "CA" in residue and "C" in residue and "N" in residue:
+                    if "CA" in residue:
                         atom_list.append(residue["CA"].get_coord())
                         atom_type_list.append(residue["CA"].element)
-                        atom_list.append(residue["C"].get_coord())
-                        atom_type_list.append(residue["C"].element)
-                        atom_list.append(residue["N"].get_coord())
-                        atom_type_list.append(residue["N"].element)
+                        if "C" in residue:
+                            atom_list.append(residue["C"].get_coord())
+                            atom_type_list.append(residue["C"].element)
+                        if "N" in residue:
+                            atom_list.append(residue["N"].get_coord())
+                            atom_type_list.append(residue["N"].element)
                         # atom_list.append(residue["O"].get_coord())
                         # atom_type_list.append(residue["O"].element)
                         res_type = "prot"
