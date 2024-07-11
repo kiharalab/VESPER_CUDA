@@ -7,20 +7,10 @@ import mrcfile
 from scipy.ndimage import fourier_gaussian, gaussian_filter, zoom
 from scipy.fftpack import fftn, ifftn
 
-from tqdm import tqdm
 from numba import njit
 from numba.typed import Dict, List
 
 # Dictionary of atom types and their corresponding masses.
-# atom_mass_dict = {
-#     "H": 1.008,
-#     "C": 12.011,
-#     "N": 14.007,
-#     "O": 15.999,
-#     "P": 30.974,  # for DNA/RNA
-#     "S": 32.066,
-# }
-
 atom_mass_dict = Dict()
 
 atom_mass_dict["H"] = 1.008
@@ -74,8 +64,9 @@ def get_atom_list(pdb_file, backbone_only=False):
                         if "N" in residue:
                             atom_list.append(residue["N"].get_coord())
                             atom_type_list.append(residue["N"].element)
-                        # atom_list.append(residue["O"].get_coord())
-                        # atom_type_list.append(residue["O"].element)
+                        if "O" in residue:
+                            atom_list.append(residue["O"].get_coord())
+                            atom_type_list.append(residue["O"].element)
                         res_type = "prot"
                     if all([a in residue for a in phos_backbone_atom_id]):
                         for a in phos_backbone_atom_id:
