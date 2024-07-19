@@ -67,6 +67,7 @@ if __name__ == "__main__":
         "-res", type=float, default=None,
         help="Resolution of the experimental map used to create simulated map from structure"
     )
+    orig.add_argument("-het", action="store_true", default=False, help="Include HETATMs in the input pdb/cif def=false")
 
     # secondary structure matching menu
     ss.add_argument("-a", type=str, required=True, help="MAP1.mrc (large)")
@@ -104,6 +105,7 @@ if __name__ == "__main__":
         help="Resolution of the experimental map used to create simulated map from structure"
     )
     ss.add_argument("-score", type=str, default=None, required=False, help="Path to a list of transformations to score")
+    ss.add_argument("-het", action="store_true", default=False, help="Include HETATMs in the input pdb/cif def=false")
 
     args = parser.parse_args()
 
@@ -125,7 +127,7 @@ if __name__ == "__main__":
         assert args.res is not None, "Please specify resolution when using structure as input."
         # simulate the map at target resolution
         sim_map_path = os.path.join(tempfile.gettempdir(), f"simu_map_{rand_str}.mrc")
-        pdb2vol(args.b, args.res, sim_map_path, backbone_only=args.bbonly)
+        pdb2vol(args.b, args.res, sim_map_path, backbone_only=args.bbonly, include_hetero=args.het)
         assert os.path.exists(sim_map_path), "Failed to create simulated map from structure."
 
         # generate secondary structure assignment for the simulated map if using ss mode

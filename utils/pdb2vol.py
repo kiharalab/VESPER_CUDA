@@ -25,7 +25,7 @@ phos_backbone_atom_id = ["O5\'", "O3\'", "P", "OP1", "OP2"]
 sugar_ring_atom_id = ["C5\'", "C4\'", "C3\'", "C2\'", "C1\'", "O4\'", "O2\'"]
 
 
-def get_atom_list(pdb_file, backbone_only=False):
+def get_atom_list(pdb_file, backbone_only=False, include_hetero=False):
     """
     Retrieve the coordinates and atom types from a PDB or CIF file.
 
@@ -81,7 +81,7 @@ def get_atom_list(pdb_file, backbone_only=False):
     else:
         for atom in structure.get_atoms():
             # do not include hetero atoms and water
-            if atom.get_full_id()[3][0][0] == " ":
+            if atom.get_full_id()[3][0][0] == " " or include_hetero:
                 atom_list.append(atom.get_coord())
                 atom_type_list.append(atom.element)
     return np.array(atom_list), atom_type_list
@@ -350,6 +350,7 @@ def pdb2vol(
         contour=False,
         bin_mask=False,
         return_data=False,
+        include_hetero=False
 ):
     """
     Convert a PDB or CIF file to a volumetric map in MRC format.
@@ -379,7 +380,7 @@ def pdb2vol(
 
     if input_pdb.split(".")[-1] not in ["pdb", "cif"]:
         raise ValueError("Input file must be a pdb or cif file")
-    atoms, types = get_atom_list(input_pdb, backbone_only=backbone_only)
+    atoms, types = get_atom_list(input_pdb, backbone_only=backbone_only, include_hetero=include_hetero)
 
     if len(atoms) == 0:
         raise ValueError("No atoms found in input file")
