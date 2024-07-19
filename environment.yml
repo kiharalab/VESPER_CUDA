@@ -4,7 +4,7 @@ channels:
   - pytorch
   - conda-forge
 dependencies:
-  - python=3.10
+  - python=3.11
   - cudatoolkit=11.8
   - pip
   - pytorch=2.0.1
@@ -15,7 +15,9 @@ dependencies:
   - scipy
   - tqdm
   - scikit-learn
+  - mkl=2024.0
   - pip:
       - biopython
       - pydssp
       - gemmi
+      - numba_progress

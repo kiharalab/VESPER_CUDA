@@ -1,8 +1,8 @@
 import numpy as np
 from Bio.PDB import PDBParser, MMCIFParser
 from Bio.PDB.PDBIO import PDBIO
-from TEMPy.maps.map_parser import MapParser
-import TEMPy.math.vector as Vector
+# from TEMPy.maps.map_parser import MapParser
+# import TEMPy.math.vector as Vector
 from utils.utils import replace_atom_numbers_with_regex
 
 
@@ -37,27 +37,27 @@ def save_rotated_pdb(input_pdb, rot_mtx, real_trans, save_path, model_num):
     replace_atom_numbers_with_regex(save_path)
 
 
-def save_rotated_mrc(mrc_path, rot_vec, real_trans, save_path):
-    emap = MapParser.readMRC(mrc_path)
-    center = Vector.Vector(0, 0, 0)
-
-    # get max distance of diagonal
-    max_dist = int(np.ceil(np.sqrt(emap.x_size() ** 2 + emap.y_size() ** 2 + emap.z_size() ** 2)))
-
-    # pad map to make sure it is big enough
-    emap.pad_map(max_dist, max_dist, max_dist)
-
-    emap = emap.map_rotate_by_axis_angle(1, 0, 0, rot_vec[0], center)
-    emap = emap.map_rotate_by_axis_angle(0, 1, 0, rot_vec[1], center)
-    emap = emap.map_rotate_by_axis_angle(0, 0, 1, rot_vec[2], center)
-
-    # add translation to origin
-
-    new_orig = emap.origin + real_trans
-    emap.change_origin(new_orig[0], new_orig[1], new_orig[2])
-
-    # map = map.translate(real_trans[0], real_trans[1], real_trans[2])
-    emap.write_to_MRC_file(save_path)
+# def save_rotated_mrc(mrc_path, rot_vec, real_trans, save_path):
+#     emap = MapParser.readMRC(mrc_path)
+#     center = Vector.Vector(0, 0, 0)
+#
+#     # get max distance of diagonal
+#     max_dist = int(np.ceil(np.sqrt(emap.x_size() ** 2 + emap.y_size() ** 2 + emap.z_size() ** 2)))
+#
+#     # pad map to make sure it is big enough
+#     emap.pad_map(max_dist, max_dist, max_dist)
+#
+#     emap = emap.map_rotate_by_axis_angle(1, 0, 0, rot_vec[0], center)
+#     emap = emap.map_rotate_by_axis_angle(0, 1, 0, rot_vec[1], center)
+#     emap = emap.map_rotate_by_axis_angle(0, 0, 1, rot_vec[2], center)
+#
+#     # add translation to origin
+#
+#     new_orig = emap.origin + real_trans
+#     emap.change_origin(new_orig[0], new_orig[1], new_orig[2])
+#
+#     # map = map.translate(real_trans[0], real_trans[1], real_trans[2])
+#     emap.write_to_MRC_file(save_path)
 
 
 def save_vec_as_pdb(
