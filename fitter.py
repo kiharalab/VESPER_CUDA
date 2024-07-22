@@ -9,7 +9,7 @@ from scipy.spatial.transform import Rotation as R
 from scipy.ndimage import laplace
 from tqdm import tqdm
 
-from utils.fileio import save_rotated_pdb, save_rotated_mrc, save_vec_as_pdb
+from utils.fileio import save_rotated_pdb, save_vec_as_pdb
 from utils.utils import euler_to_mtx, get_score
 
 
@@ -371,8 +371,8 @@ class MapFitter:
             self._retrieve_data(self.final_list)
             self._save_topn_vec_as_pdb()
 
-        if self.save_mrc:
-            self._save_topn_mrc()
+        # if self.save_mrc:
+        #     self._save_topn_mrc()
 
     def refine(self, ang_interval, top_n, sort_by_ldp_recall=False):
         print("###Start Refining###")
@@ -491,15 +491,15 @@ class MapFitter:
                 i,
             )
 
-    def _save_topn_mrc(self):
-        os.makedirs(os.path.join(self.outdir, "MRC"), exist_ok=True)
-        for i, item in enumerate(self.final_list):
-            angle_str = f"rx{int(item['angle'][0])}_ry{int(item['angle'][1])}_rz{int(item['angle'][2])}"
-            trans_str = f"tx{item['real_trans'][0]:.3f}_ty{item['real_trans'][1]:.3f}_tz{item['real_trans'][2]:.3f}"
-            filename = f"#{i}_{angle_str}_{trans_str}.mrc"
-            save_rotated_mrc(
-                self.tgt_map.mrcfile_path, item["angle"], item["real_trans"], os.path.join(self.outdir, "MRC", filename)
-            )
+    # def _save_topn_mrc(self):
+    #     os.makedirs(os.path.join(self.outdir, "MRC"), exist_ok=True)
+    #     for i, item in enumerate(self.final_list):
+    #         angle_str = f"rx{int(item['angle'][0])}_ry{int(item['angle'][1])}_rz{int(item['angle'][2])}"
+    #         trans_str = f"tx{item['real_trans'][0]:.3f}_ty{item['real_trans'][1]:.3f}_tz{item['real_trans'][2]:.3f}"
+    #         filename = f"#{i}_{angle_str}_{trans_str}.mrc"
+    #         save_rotated_mrc(
+    #             self.tgt_map.mrcfile_path, item["angle"], item["real_trans"], os.path.join(self.outdir, "MRC", filename)
+    #         )
 
     def _retrieve_data(self, result_list):
         for result in result_list:
