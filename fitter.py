@@ -618,55 +618,48 @@ class MapFitter:
     from tqdm import tqdm
 
     def _remove_dup_results(self):
+        from scipy.spatial import cKDTree
         print("###Start Duplicate Removal###")
+
+        # Convert result_list to numpy arrays
+        angles = np.array([r['angle'] for r in self.result_list])
+        translations = np.array([r['vox_trans'] for r in self.result_list])
 
         # Precompute constant values
         ang_range = 30 // self.ang_interval * int(self.ang_interval)
         ang_range = int(ang_range)
 
-        # Convert result_list to numpy array for faster operations
-        result_array = np.array([(r['angle'], r['vox_trans']) for r in self.result_list],
-                                dtype=[('angle', float, 3), ('vox_trans', float, 3)])
+        # Create KD-Tree for efficient nearest neighbor search
+        tree = cKDTree(angles)
 
-        # Create a dictionary to store angles and their corresponding translations
-        angle_dict = {}
-        no_dup_results = []
+        # Mask for keeping track of non-duplicate results
+        keep_mask = np.ones(len(angles), dtype=bool)
 
-        # Generate all possible angle offsets once
-        offsets = np.array(np.meshgrid(
-            range(-ang_range, ang_range + 1, int(self.ang_interval)),
-            range(-ang_range, ang_range + 1, int(self.ang_interval)),
-            range(-ang_range, ang_range + 1, int(self.ang_interval))
-        )).T.reshape(-1, 3)
+        for i in tqdm(range(len(angles)), desc="Removing Duplicates"):
+            if keep_mask[i]:
+                # Find neighbors within ang_range
+                neighbors = tree.query_ball_point(angles[i], ang_range)
 
-        for result in tqdm(result_array, desc="Removing Duplicates"):
-            angle = tuple(result['angle'])
-            vox_trans = result['vox_trans']
+                # Remove self from neighbors
+                neighbors = [n for n in neighbors if n != i]
 
-            is_duplicate = False
-            for existing_angle, existing_trans in angle_dict.items():
-                # Check if angles are close
-                if np.all(np.abs(np.array(angle) - np.array(existing_angle)) <= ang_range):
-                    # Check Manhattan distance of translations
-                    if np.sum(np.abs(vox_trans - existing_trans)) < self.tgt_map.new_dim:
-                        is_duplicate = True
-                        break
+                if neighbors:
+                    # Calculate Manhattan distances for translations
+                    distances = np.sum(np.abs(translations[neighbors] - translations[i]), axis=1)
 
-            if not is_duplicate:
-                angle_dict[angle] = vox_trans
-                no_dup_results.append({
-                    'angle': result['angle'],
-                    'vox_trans': result['vox_trans']
-                })
+                    # Mark duplicates
+                    duplicates = distances < self.tgt_map.new_dim
+                    keep_mask[np.array(neighbors)[duplicates]] = False
 
-                # Add surrounding angles to dictionary
-                surrounding_angles = (result['angle'] + offsets) % [360, 360, 180]
-                for surr_angle in surrounding_angles:
-                    surr_angle_tuple = tuple(surr_angle)
-                    if surr_angle_tuple not in angle_dict:
-                        angle_dict[surr_angle_tuple] = vox_trans
+        # Apply mask to get non-duplicate results
+        non_dup_indices = np.where(keep_mask)[0]
 
-        self.result_list = no_dup_results
+        self.result_list = [
+            {'angle': angles[i], 'vox_trans': translations[i]}
+            for i in non_dup_indices
+        ]
+
+        print(f"Reduced from {len(angles)} to {len(self.result_list)} results")
 
     @staticmethod
     def _print_result_stats(results, return_stats=False):
@@ -1099,3 +1092,7 @@ class MapFitter:
             if quat not in seen:
                 seen.add(quat)
                 self.angle_comb.append(ang)
+
+    def _eval_current_trans(self, rot_ang, trans):
+        self._rot_and_search_fft(rot_ang, False, None, None, None, None)
+        return self._find_best_trans_by_fft_list_ss(self.result_list, self.alpha, self.vec_score_mean, self.vec_score_std, self.ss_score_mean, self.ss_score_std, self.gpu)
