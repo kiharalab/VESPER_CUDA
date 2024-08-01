@@ -563,54 +563,96 @@ class MapFitter:
         if sort:
             results.sort(key=lambda x: x["ldp_recall"], reverse=True)
 
-    def _remove_dup_results(self):
-        no_dup_results = []
+    # def _remove_dup_results(self):
+    #     no_dup_results = []
+    #
+    #     print("###Start Duplicate Removal###")
+    #
+    #     # duplicate removal
+    #     hash_angs = {}
+    #
+    #     # non_dup_count = 0
+    #
+    #     # at least 30 degrees apart
+    #     n_angles_apart = 30 // self.ang_interval  # could be directly specified
+    #     ang_range = n_angles_apart * int(self.ang_interval)
+    #     ang_range = int(ang_range)
+    #
+    #     for result in tqdm(self.result_list, desc="Removing Duplicates"):
+    #         # duplicate removal
+    #         if tuple(result["angle"]) in hash_angs:
+    #             # print(f"Duplicate: {result_mrc['angle']}")
+    #             trans = hash_angs[tuple(result["angle"])]
+    #             # manhattan distance
+    #             if np.sum(np.abs(trans - result["vox_trans"])) < self.tgt_map.new_dim:
+    #                 # result_mrc["vec_score"] = 0
+    #                 continue
+    #
+    #         # add to hash
+    #         hash_angs[tuple(result["angle"])] = np.array(result["vox_trans"])
+    #
+    #         ang_x, ang_y, ang_z = int(result["angle"][0]), int(result["angle"][1]), int(result["angle"][2])
+    #
+    #         # add surrounding angles to hash
+    #         for xx in range(ang_x - ang_range, ang_x + ang_range + 1, int(self.ang_interval)):
+    #             for yy in range(ang_y - ang_range, ang_y + ang_range + 1, int(self.ang_interval)):
+    #                 for zz in range(ang_z - ang_range, ang_z + ang_range + 1, int(self.ang_interval)):
+    #                     x_positive = xx % 360
+    #                     y_positive = yy % 360
+    #                     z_positive = zz % 180
+    #
+    #                     x_positive = x_positive + 360 if x_positive < 0 else x_positive
+    #                     y_positive = y_positive + 360 if y_positive < 0 else y_positive
+    #                     z_positive = z_positive + 180 if z_positive < 0 else z_positive
+    #
+    #                     curr_trans = np.array([x_positive, y_positive, z_positive]).astype(np.float64)
+    #                     # insert into hash
+    #                     hash_angs[tuple(curr_trans)] = np.array(result["vox_trans"])
+    #
+    #         # non_dup_count += 1
+    #         no_dup_results.append(result)
+    #
+    #     self.result_list = no_dup_results
 
+    import numpy as np
+    from tqdm import tqdm
+
+    def _remove_dup_results(self):
         print("###Start Duplicate Removal###")
 
-        # duplicate removal
-        hash_angs = {}
-
-        # non_dup_count = 0
-
-        # at least 30 degrees apart
-        n_angles_apart = 30 // self.ang_interval  # could be directly specified
-        ang_range = n_angles_apart * int(self.ang_interval)
+        # Precompute constant values
+        ang_range = 30 // self.ang_interval * int(self.ang_interval)
         ang_range = int(ang_range)
 
-        for result in tqdm(self.result_list, desc="Removing Duplicates"):
-            # duplicate removal
-            if tuple(result["angle"]) in hash_angs:
-                # print(f"Duplicate: {result_mrc['angle']}")
-                trans = hash_angs[tuple(result["angle"])]
-                # manhattan distance
-                if np.sum(np.abs(trans - result["vox_trans"])) < self.tgt_map.new_dim:
-                    # result_mrc["vec_score"] = 0
-                    continue
+        # Convert result_list to numpy array for faster operations
+        result_array = np.array([(r['angle'], r['vox_trans']) for r in self.result_list],
+                                dtype=[('angle', float, 3), ('vox_trans', float, 3)])
 
-            # add to hash
-            hash_angs[tuple(result["angle"])] = np.array(result["vox_trans"])
+        # Create a set for faster membership testing
+        angle_set = set()
+        no_dup_results = []
 
-            ang_x, ang_y, ang_z = int(result["angle"][0]), int(result["angle"][1]), int(result["angle"][2])
+        # Generate all possible angle offsets once
+        offsets = np.array(np.meshgrid(
+            range(-ang_range, ang_range + 1, int(self.ang_interval)),
+            range(-ang_range, ang_range + 1, int(self.ang_interval)),
+            range(-ang_range, ang_range + 1, int(self.ang_interval))
+        )).T.reshape(-1, 3)
 
-            # add surrounding angles to hash
-            for xx in range(ang_x - ang_range, ang_x + ang_range + 1, int(self.ang_interval)):
-                for yy in range(ang_y - ang_range, ang_y + ang_range + 1, int(self.ang_interval)):
-                    for zz in range(ang_z - ang_range, ang_z + ang_range + 1, int(self.ang_interval)):
-                        x_positive = xx % 360
-                        y_positive = yy % 360
-                        z_positive = zz % 180
+        for result in tqdm(result_array, desc="Removing Duplicates"):
+            angle = tuple(result['angle'])
 
-                        x_positive = x_positive + 360 if x_positive < 0 else x_positive
-                        y_positive = y_positive + 360 if y_positive < 0 else y_positive
-                        z_positive = z_positive + 180 if z_positive < 0 else z_positive
+            if angle not in angle_set:
+                angle_set.add(angle)
+                no_dup_results.append({
+                    'angle': result['angle'],
+                    'vox_trans': result['vox_trans']
+                })
 
-                        curr_trans = np.array([x_positive, y_positive, z_positive]).astype(np.float64)
-                        # insert into hash
-                        hash_angs[tuple(curr_trans)] = np.array(result["vox_trans"])
-
-            # non_dup_count += 1
-            no_dup_results.append(result)
+                # Add surrounding angles to set
+                surrounding_angles = (result['angle'] + offsets) % [360, 360, 180]
+                for surr_angle in surrounding_angles:
+                    angle_set.add(tuple(surr_angle))
 
         self.result_list = no_dup_results
 
