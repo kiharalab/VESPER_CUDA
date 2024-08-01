@@ -628,8 +628,8 @@ class MapFitter:
         result_array = np.array([(r['angle'], r['vox_trans']) for r in self.result_list],
                                 dtype=[('angle', float, 3), ('vox_trans', float, 3)])
 
-        # Create a set for faster membership testing
-        angle_set = set()
+        # Create a dictionary to store angles and their corresponding translations
+        angle_dict = {}
         no_dup_results = []
 
         # Generate all possible angle offsets once
@@ -641,18 +641,30 @@ class MapFitter:
 
         for result in tqdm(result_array, desc="Removing Duplicates"):
             angle = tuple(result['angle'])
+            vox_trans = result['vox_trans']
 
-            if angle not in angle_set:
-                angle_set.add(angle)
+            is_duplicate = False
+            for existing_angle, existing_trans in angle_dict.items():
+                # Check if angles are close
+                if np.all(np.abs(np.array(angle) - np.array(existing_angle)) <= ang_range):
+                    # Check Manhattan distance of translations
+                    if np.sum(np.abs(vox_trans - existing_trans)) < self.tgt_map.new_dim:
+                        is_duplicate = True
+                        break
+
+            if not is_duplicate:
+                angle_dict[angle] = vox_trans
                 no_dup_results.append({
                     'angle': result['angle'],
                     'vox_trans': result['vox_trans']
                 })
 
-                # Add surrounding angles to set
+                # Add surrounding angles to dictionary
                 surrounding_angles = (result['angle'] + offsets) % [360, 360, 180]
                 for surr_angle in surrounding_angles:
-                    angle_set.add(tuple(surr_angle))
+                    surr_angle_tuple = tuple(surr_angle)
+                    if surr_angle_tuple not in angle_dict:
+                        angle_dict[surr_angle_tuple] = vox_trans
 
         self.result_list = no_dup_results
 
