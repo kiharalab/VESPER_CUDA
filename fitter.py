@@ -4,7 +4,6 @@ from datetime import datetime
 from itertools import product
 
 import numpy as np
-import torch
 from scipy.spatial.transform import Rotation as R
 from scipy.ndimage import laplace
 from tqdm import tqdm
@@ -48,6 +47,8 @@ class MapFitter:
         self.input_pdb = input_pdb
         self.threads = threads
         self.gpu = gpu
+        if self.gpu:
+            import torch
         self.device = device
         self.topn = topn
         self.outdir = outdir
