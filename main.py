@@ -49,7 +49,7 @@ if __name__ == "__main__":
              + "P: Pearson Correlation Coefficient Mode\n"
              + "L: Laplacian Filtering Mode",
     )
-    orig.add_argument("-E", type=bool, default=False, help="Evaluation mode of the current position def=false")
+    orig.add_argument("-E", action="store_true", default=False, help="Evaluation mode of the current position def=false")
     orig.add_argument("-o", type=str, default=None, help="Output folder name")
     orig.add_argument("-gpu", type=int, help="GPU ID to use for CUDA acceleration def=0")
     orig.add_argument("-nodup", action="store_true", default=False,
@@ -88,7 +88,7 @@ if __name__ == "__main__":
     ss.add_argument("-A", type=float, default=30.0, help="Sampling angle spacing def=30.0")
     ss.add_argument("-N", type=int, default=10, help="Refine Top [int] models def=10")
     ss.add_argument("-S", action="store_true", default=False, help="Show topN models in PDB format def=false")
-    ss.add_argument("-E", type=bool, default=False, help="Evaluation mode of the current position def=false")
+    ss.add_argument("-E", action="store_true", default=False, help="Evaluation mode of the current position def=false")
     ss.add_argument("-o", type=str, default=None, help="Output folder name")
     ss.add_argument("-nodup", action="store_true", default=False,
                     help="Remove duplicate models using heuristics def=false")
