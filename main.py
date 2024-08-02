@@ -240,6 +240,12 @@ if __name__ == "__main__":
         # set mrc output path
         trans_mrc_path = args.b if args.mrcout else None
 
+        if args.E:
+            print("### Evaluation Mode ###")
+            overlap, cc, pcc, Nm, total, dot = get_score(ref_map, tgt_map.data, tgt_map.vec, np.array((0, 0, 0)))
+            print("Overlap: ", overlap, "CC: ", cc, "PCC: ", pcc, "N: ", Nm, "Total: ", total, "Dot: ", dot)
+            exit(0)
+
         fitter = MapFitter(
             ref_map,
             tgt_map,
