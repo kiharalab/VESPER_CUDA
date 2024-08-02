@@ -347,7 +347,7 @@ class MapFitter:
             print()
 
         if self.ang_interval >= 5:
-            self.refine(2, self.topn, sort_by_ldp_recall=self.ldp_recall_mode)
+            self.refine(1, self.topn, sort_by_ldp_recall=self.ldp_recall_mode)
 
         if self.refined_list:
             self.final_list = self.refined_list[: self.topn]
