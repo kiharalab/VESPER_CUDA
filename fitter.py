@@ -339,7 +339,6 @@ class MapFitter:
         # remove duplicates
         if self.remove_dup:
             self._remove_dup_results()
-            print("#Non-duplicate count: " + str(len(self.result_list)))
             print()
 
         # calculate ldp recall if specified
@@ -563,103 +562,40 @@ class MapFitter:
         if sort:
             results.sort(key=lambda x: x["ldp_recall"], reverse=True)
 
-    # def _remove_dup_results(self):
-    #     no_dup_results = []
-    #
-    #     print("###Start Duplicate Removal###")
-    #
-    #     # duplicate removal
-    #     hash_angs = {}
-    #
-    #     # non_dup_count = 0
-    #
-    #     # at least 30 degrees apart
-    #     n_angles_apart = 30 // self.ang_interval  # could be directly specified
-    #     ang_range = n_angles_apart * int(self.ang_interval)
-    #     ang_range = int(ang_range)
-    #
-    #     for result in tqdm(self.result_list, desc="Removing Duplicates"):
-    #         # duplicate removal
-    #         if tuple(result["angle"]) in hash_angs:
-    #             # print(f"Duplicate: {result_mrc['angle']}")
-    #             trans = hash_angs[tuple(result["angle"])]
-    #             # manhattan distance
-    #             if np.sum(np.abs(trans - result["vox_trans"])) < self.tgt_map.new_dim:
-    #                 # result_mrc["vec_score"] = 0
-    #                 continue
-    #
-    #         # add to hash
-    #         hash_angs[tuple(result["angle"])] = np.array(result["vox_trans"])
-    #
-    #         ang_x, ang_y, ang_z = int(result["angle"][0]), int(result["angle"][1]), int(result["angle"][2])
-    #
-    #         # add surrounding angles to hash
-    #         for xx in range(ang_x - ang_range, ang_x + ang_range + 1, int(self.ang_interval)):
-    #             for yy in range(ang_y - ang_range, ang_y + ang_range + 1, int(self.ang_interval)):
-    #                 for zz in range(ang_z - ang_range, ang_z + ang_range + 1, int(self.ang_interval)):
-    #                     x_positive = xx % 360
-    #                     y_positive = yy % 360
-    #                     z_positive = zz % 180
-    #
-    #                     x_positive = x_positive + 360 if x_positive < 0 else x_positive
-    #                     y_positive = y_positive + 360 if y_positive < 0 else y_positive
-    #                     z_positive = z_positive + 180 if z_positive < 0 else z_positive
-    #
-    #                     curr_trans = np.array([x_positive, y_positive, z_positive]).astype(np.float64)
-    #                     # insert into hash
-    #                     hash_angs[tuple(curr_trans)] = np.array(result["vox_trans"])
-    #
-    #         # non_dup_count += 1
-    #         no_dup_results.append(result)
-    #
-    #     self.result_list = no_dup_results
-
-    import numpy as np
-    from tqdm import tqdm
-
     def _remove_dup_results(self):
-        from scipy.spatial import cKDTree
+        no_dup_results = []
+
+        l1_dist_list = []
+
         print("###Start Duplicate Removal###")
 
-        # Convert result_list to numpy arrays
-        angles = np.array([r['angle'] for r in self.result_list])
-        translations = np.array([r['vox_trans'] for r in self.result_list])
+        for result in self.result_list:
+            result["quat"] = R.from_euler("xyz", result["angle"], degrees=True).as_quat()
 
-        # Precompute constant values
-        ang_range = 30 // self.ang_interval * int(self.ang_interval)
-        ang_range = int(ang_range)
+        # # duplicate removal
+        hash_quats = {}
+        for result in tqdm(self.result_list, desc="Removing Duplicates"):
+            # duplicate removal
+            found = False
+            # compute all pairwise L1 distances to existing rotations in dice
+            for key in hash_quats.keys():
+                # calculate the dot product to check angles apart
+                if np.arccos(np.abs(np.dot(result["quat"], np.array(key)))) < np.radians(30.0):
+                    # found duplicate angles within the interval, check for translation
+                    l1_dist = np.sum(np.abs(hash_quats[key] - result["vox_trans"]))
+                    l1_dist_list.append(l1_dist)
+                    if l1_dist < self.tgt_map.new_dim:
+                        found = True
+                        break
+            if not found:
+                # add to hash
+                hash_quats[tuple(result["quat"])] = np.array(result["vox_trans"])
+                no_dup_results.append(result)
+            if not self.ldp_recall_mode and len(no_dup_results) >= self.topn:
+                break
 
-        # Create KD-Tree for efficient nearest neighbor search
-        tree = cKDTree(angles)
-
-        # Mask for keeping track of non-duplicate results
-        keep_mask = np.ones(len(angles), dtype=bool)
-
-        for i in tqdm(range(len(angles)), desc="Removing Duplicates"):
-            if keep_mask[i]:
-                # Find neighbors within ang_range
-                neighbors = tree.query_ball_point(angles[i], ang_range)
-
-                # Remove self from neighbors
-                neighbors = [n for n in neighbors if n != i]
-
-                if neighbors:
-                    # Calculate Manhattan distances for translations
-                    distances = np.sum(np.abs(translations[neighbors] - translations[i]), axis=1)
-
-                    # Mark duplicates
-                    duplicates = distances < self.tgt_map.new_dim
-                    keep_mask[np.array(neighbors)[duplicates]] = False
-
-        # Apply mask to get non-duplicate results
-        non_dup_indices = np.where(keep_mask)[0]
-
-        self.result_list = [
-            {'angle': angles[i], 'vox_trans': translations[i]}
-            for i in non_dup_indices
-        ]
-
-        print(f"Reduced from {len(angles)} to {len(self.result_list)} results")
+        # print("#Non-duplicate count: " + str(len(self.result_list)))
+        self.result_list = no_dup_results
 
     @staticmethod
     def _print_result_stats(results, return_stats=False):
