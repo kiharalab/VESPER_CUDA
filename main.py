@@ -9,8 +9,7 @@ import numpy as np
 from fitter import MapFitter
 from map import EMmap, unify_dims
 from utils.pdb2vol import pdb2vol
-from utils.segmap import segment_map
-from utils.unify import unify_map
+from utils.utils import get_score
 
 
 class Mode(Enum):
@@ -98,7 +97,7 @@ if __name__ == "__main__":
     ss.add_argument("-gpu", type=int, help="GPU ID to use for CUDA acceleration def=0")
     ss.add_argument("-pdbin", type=str, default=None, help="Input PDB file to be transformed def=None")
     ss.add_argument("-bbonly", type=bool, default=False,
-                      help="Whether to only use backbone atoms for simulated map def=false")
+                    help="Whether to only use backbone atoms for simulated map def=false")
     ss.add_argument("-c", type=int, default=2, help="Number of threads to use def=2")
     ss.add_argument(
         "-res", type=float, default=None,
@@ -343,6 +342,12 @@ if __name__ == "__main__":
 
         start_init_fitter = time.time()
         print("Resample time: ", start_init_fitter - start_resample_map, " seconds")
+
+        if args.E:
+            print("### Evaluation Mode ###")
+            overlap, cc, pcc, Nm, total, dot = get_score(ref_map, tgt_map.data, tgt_map.vec, np.array((0, 0, 0)))
+            print("Overlap: ", overlap, "CC: ", cc, "PCC: ", pcc, "N: ", Nm, "Total: ", total, "Dot: ", dot)
+            exit(0)
 
         fitter = MapFitter(
             ref_map,
