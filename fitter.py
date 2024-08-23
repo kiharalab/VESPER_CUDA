@@ -641,8 +641,7 @@ class MapFitter:
             trans[2] -= self.tgt_map.new_dim
 
         tgt_new_cent = r.apply(self.tgt_map.new_cent)  # rotate the center
-        real_trans = self.ref_map.new_cent - (
-                tgt_new_cent + trans * self.tgt_map.new_width)  # calculate new translation
+        real_trans = self.ref_map.new_cent - (tgt_new_cent + trans * self.tgt_map.new_width)  # calculate new translation
         return real_trans
 
     def _rot_and_search_fft_ss(self, rot_ang, return_data, v_ave, v_std, ss_ave, ss_std):

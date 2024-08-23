@@ -67,6 +67,7 @@ if __name__ == "__main__":
         help="Resolution of the experimental map used to create simulated map from structure"
     )
     orig.add_argument("-het", action="store_true", default=False, help="Include HETATMs in the input pdb/cif def=false")
+    orig.add_argument("-v", type=str, default=None, help="Path to vector visualization file def=None")
 
     # secondary structure matching menu
     ss.add_argument("-a", type=str, required=True, help="MAP1.mrc (large)")
@@ -244,6 +245,13 @@ if __name__ == "__main__":
             print("### Evaluation Mode ###")
             _, overlap, cc, pcc, Nm, total, dot = get_score(ref_map, tgt_map.data, tgt_map.vec, np.array((0, 0, 0)))
             print("Overlap: ", overlap, "CC: ", cc, "PCC: ", pcc, "N: ", Nm, "Total: ", total, "Dot: ", dot)
+            exit(0)
+
+        if args.v:
+            print("### Vector Visualization Mode ###")
+            os.makedirs(args.v, exist_ok=True)
+            ref_map.save_vectors(os.path.join(args.v, "ref_map"))
+            tgt_map.save_vectors(os.path.join(args.v, "tgt_map"))
             exit(0)
 
         fitter = MapFitter(

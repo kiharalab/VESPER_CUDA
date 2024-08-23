@@ -1,4 +1,5 @@
 import copy
+import os.path
 
 import mrcfile
 import numpy as np
@@ -210,6 +211,17 @@ class EMmap:
         self.ave = ave
         self.std = std
         self.std_norm_ave = std_norm_ave
+
+
+    def save_vectors(self, save_path):
+        print("Saving vectors to: " + save_path)
+        coords = np.array(np.nonzero(self.new_data)).T
+        real_coords = self.new_orig + coords * self.new_width
+        vectors = self.vec[np.nonzero(self.new_data)]
+        print(vectors.shape)
+        print(real_coords.shape)
+        np.save(save_path + "_coords.npy", real_coords)
+        np.save(save_path + "_vecs.npy", vectors)
 
 
 def unify_dims(map_list, voxel_size):
