@@ -1,40 +1,46 @@
 import numpy as np
 from Bio.PDB import PDBParser, MMCIFParser
 from Bio.PDB.PDBIO import PDBIO
+from Bio.PDB.mmcifio import MMCIFIO
 # from TEMPy.maps.map_parser import MapParser
 # import TEMPy.math.vector as Vector
 from utils.utils import replace_atom_numbers_with_regex
 
 
-def save_rotated_pdb(input_pdb, rot_mtx, real_trans, save_path, model_num):
-    pdbio = PDBIO()
-    # check input file format
-    parser = None
-    if input_pdb.split(".")[-1] == "pdb":
+def save_rotated_pdb(input_structure, rot_mtx, real_trans, save_path, model_num):
+
+    file_type = input_structure.split(".")[-1]
+    if file_type == "pdb":
         parser = PDBParser(QUIET=True)
-    elif input_pdb.split(".")[-1] == "cif":
+    elif file_type == "cif":
         parser = MMCIFParser(QUIET=True)
     else:
         raise Exception("Input PDB/mmCIF file format not supported.")
 
-    structure = parser.get_structure("target_pdb", input_pdb)
+    save_path = save_path + "." + file_type
+
+    io = PDBIO() if file_type == "pdb" else MMCIFIO()
+
+    structure = parser.get_structure("target_pdb", input_structure)
     structure.transform(rot_mtx, real_trans)
 
-    pdbio.set_structure(structure)
-    pdbio.save(save_path)
+    io.set_structure(structure)
+    io.save(save_path)
 
-    # add model number
-    with open(save_path, "r") as f:
-        lines = f.readlines()
+    # pdb postprocessing
+    if file_type == "pdb":
+        # add model number
+        with open(save_path, "r") as f:
+            lines = f.readlines()
 
-    with open(save_path, "w") as f:
-        f.write(f"MODEL        {model_num}\n")
-        for line in lines:
-            f.write(line)
-        f.write("ENDMDL\n")
+        with open(save_path, "w") as f:
+            f.write(f"MODEL        {model_num}\n")
+            for line in lines:
+                f.write(line)
+            f.write("ENDMDL\n")
 
-    # process large pdb files
-    replace_atom_numbers_with_regex(save_path)
+        # process large pdb files
+        replace_atom_numbers_with_regex(save_path)
 
 
 # def save_rotated_mrc(mrc_path, rot_vec, real_trans, save_path):
