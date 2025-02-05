@@ -179,6 +179,12 @@ class MapFitter:
             self.ref_map_fft_list_gpu = [
                 torch.from_numpy(fft_arr).to(self.device).share_memory_() for fft_arr in self.ref_map_fft_list
             ]
+
+            self.new_data_array = torch.zeros_like(self.tgt_map.new_data_gpu, device=self.device).pin_memory()
+            if self.ss_mix_score_mode:
+                self.new_ss_array = torch.zeros_like(self.tgt_map.new_ss_data_gpu, device=self.device).pin_memory()
+            if self.mode == "VecProduct":
+                self.new_vec_array = torch.zeros_like(self.tgt_map.vec_gpu, device=self.device).pin_memory()
         else:
             import pyfftw.config
 
@@ -557,7 +563,6 @@ class MapFitter:
             # rot_mtx = euler_to_mtx(torch.tensor(result["angle"], device=self.device)).t()
             result["ldp_recall"] = self._calc_ldp_recall_score_item(
                 self.ldp_atoms, self.backbone_ca, rot_mtx, torch.from_numpy(result["real_trans"]).to(self.device)
-            )
 
         # sort by LDP recall
         if sort:
@@ -804,71 +809,44 @@ class MapFitter:
     @staticmethod
     def _gpu_rot_map(data, vec, mtx, new_pos_grid, device, rot_vec=True, ss_mix_score_mode=False, tgt_map_ss_data=None):
         import torch
-
+        
         with torch.no_grad():
-            # set the dimension to be x dimension as all dimension are the same
             dim = data.shape[0]
-
-            # set the rotation center
             cent = 0.5 * float(dim)
-            cent = torch.tensor(cent, device=device, dtype=torch.float32, requires_grad=False)
-
-            # get relative new positions from center
+            cent = torch.tensor(cent, device=device, dtype=torch.float32)
+            
+            # Calculate all positions in one go
             new_pos = new_pos_grid - cent
-
-            # reversely rotate the new position lists to get old positions
-            # old_pos = torch.einsum("ij, kj->ki", mtx.T, new_pos) + cent
             old_pos = new_pos @ mtx + cent
-
-            # round old positions to nearest integer
             old_pos.round_()
-
-            # init new vec and dens array
-            new_data_array = torch.zeros_like(data, device=device, dtype=torch.float32, requires_grad=False)
-
+            
+            # Create mask and get valid positions
             in_bound_mask = torch.all((old_pos >= 0) & (old_pos < dim), axis=1)
-
-            # get valid old positions in bound
-            valid_old_pos = (old_pos[in_bound_mask]).long()
-
-            # get nonzero density positions in the map
-            # non_zero_mask = data[valid_old_pos[:, 0], valid_old_pos[:, 1], valid_old_pos[:, 2]] > 0
-
-            # apply nonzero mask to valid positions
-            # non_zero_old_pos = valid_old_pos[non_zero_mask]
-
-            # get corresponding new positions
-            # new_pos = (new_pos[in_bound_mask][non_zero_mask] + cent).long()
+            valid_old_pos = old_pos[in_bound_mask].long()
             new_pos = new_pos[in_bound_mask].add_(cent).long()
-
-            # fill new density entries
-            new_data_array[new_pos[:, 0], new_pos[:, 1], new_pos[:, 2]] = data[
-                valid_old_pos[:, 0], valid_old_pos[:, 1], valid_old_pos[:, 2]
-            ]
-
+            
+            # Use scatter_ for faster assignment
+            new_data_array = torch.zeros_like(data, device=device)
+            indices = new_pos.t()
+            values = data[valid_old_pos[:, 0], valid_old_pos[:, 1], valid_old_pos[:, 2]]
+            new_data_array.index_put_((indices[0], indices[1], indices[2]), values)
+            
             if ss_mix_score_mode:
-                new_ss_array = torch.zeros_like(tgt_map_ss_data, device=device, dtype=torch.float32,
-                                                requires_grad=False)
-                new_ss_array[new_pos[:, 0], new_pos[:, 1], new_pos[:, 2]] = tgt_map_ss_data[
-                    valid_old_pos[:, 0], valid_old_pos[:, 1], valid_old_pos[:, 2]
-                ]
+                new_ss_array = torch.zeros_like(tgt_map_ss_data, device=device)
+                ss_values = tgt_map_ss_data[valid_old_pos[:, 0], valid_old_pos[:, 1], valid_old_pos[:, 2]]
+                new_ss_array.index_put_((indices[0], indices[1], indices[2]), ss_values)
             else:
                 new_ss_array = None
-
+            
             if rot_vec:
-                new_vec_array = torch.zeros_like(vec, device=device, dtype=torch.float32, requires_grad=False)
-                # fetch and rotate the vectors
-                non_zero_vecs = vec[valid_old_pos[:, 0], valid_old_pos[:, 1], valid_old_pos[:, 2]]
-
-                new_vec = non_zero_vecs @ mtx.T
-                # new_vec = torch.einsum("ij, kj->ki", mtx, non_zero_vecs)
-
-                # fill new vector entries
-                new_vec_array[new_pos[:, 0], new_pos[:, 1], new_pos[:, 2]] = new_vec
+                new_vec_array = torch.zeros_like(vec, device=device)
+                vec_values = vec[valid_old_pos[:, 0], valid_old_pos[:, 1], valid_old_pos[:, 2]]
+                rotated_vecs = vec_values @ mtx.T
+                new_vec_array.index_put_((indices[0], indices[1], indices[2]), rotated_vecs)
             else:
                 new_vec_array = None
-
-        return new_vec_array, new_data_array, new_ss_array
+            
+            return new_vec_array, new_data_array, new_ss_array
 
     @staticmethod
     def _rot_map(data, vec, mtx, new_pos_grid, rot_vec=True, ss_mix_score_mode=False, tgt_map_ss_data=None):
