@@ -180,11 +180,11 @@ class MapFitter:
                 torch.from_numpy(fft_arr).to(self.device).share_memory_() for fft_arr in self.ref_map_fft_list
             ]
 
-            self.new_data_array = torch.zeros_like(self.tgt_map.new_data_gpu, device=self.device).pin_memory()
+            self.new_data_array = torch.zeros_like(self.tgt_map.new_data_gpu, device=self.device)
             if self.ss_mix_score_mode:
-                self.new_ss_array = torch.zeros_like(self.tgt_map.new_ss_data_gpu, device=self.device).pin_memory()
+                self.new_ss_array = torch.zeros_like(self.tgt_map.new_ss_data_gpu, device=self.device)
             if self.mode == "VecProduct":
-                self.new_vec_array = torch.zeros_like(self.tgt_map.vec_gpu, device=self.device).pin_memory()
+                self.new_vec_array = torch.zeros_like(self.tgt_map.vec_gpu, device=self.device)
         else:
             import pyfftw.config
 
@@ -563,6 +563,7 @@ class MapFitter:
             # rot_mtx = euler_to_mtx(torch.tensor(result["angle"], device=self.device)).t()
             result["ldp_recall"] = self._calc_ldp_recall_score_item(
                 self.ldp_atoms, self.backbone_ca, rot_mtx, torch.from_numpy(result["real_trans"]).to(self.device)
+            )
 
         # sort by LDP recall
         if sort:
