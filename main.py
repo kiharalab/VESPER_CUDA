@@ -9,7 +9,8 @@ import numpy as np
 from fitter import MapFitter
 from map import EMmap, unify_dims
 from utils.pdb2vol import pdb2vol
-from utils.utils import get_score
+from utils.segmap import segment_map
+from utils.unify import unify_map
 
 
 class Mode(Enum):
@@ -49,7 +50,7 @@ if __name__ == "__main__":
              + "P: Pearson Correlation Coefficient Mode\n"
              + "L: Laplacian Filtering Mode",
     )
-    orig.add_argument("-E", action="store_true", default=False, help="Evaluation mode of the current position def=false")
+    orig.add_argument("-E", type=bool, default=False, help="Evaluation mode of the current position def=false")
     orig.add_argument("-o", type=str, default=None, help="Output folder name")
     orig.add_argument("-gpu", type=int, help="GPU ID to use for CUDA acceleration def=0")
     orig.add_argument("-nodup", action="store_true", default=False,
@@ -66,8 +67,8 @@ if __name__ == "__main__":
         "-res", type=float, default=None,
         help="Resolution of the experimental map used to create simulated map from structure"
     )
-    orig.add_argument("-het", action="store_true", default=False, help="Include HETATMs in the input pdb/cif def=false")
-    orig.add_argument("-v", type=str, default=None, help="Path to vector visualization file def=None")
+    orig.add_argument("-batch", type=int, default=None, 
+                     help="Override batch size for GPU processing def=auto-detect")
 
     # secondary structure matching menu
     ss.add_argument("-a", type=str, required=True, help="MAP1.mrc (large)")
@@ -89,7 +90,7 @@ if __name__ == "__main__":
     ss.add_argument("-A", type=float, default=30.0, help="Sampling angle spacing def=30.0")
     ss.add_argument("-N", type=int, default=10, help="Refine Top [int] models def=10")
     ss.add_argument("-S", action="store_true", default=False, help="Show topN models in PDB format def=false")
-    ss.add_argument("-E", action="store_true", default=False, help="Evaluation mode of the current position def=false")
+    ss.add_argument("-E", type=bool, default=False, help="Evaluation mode of the current position def=false")
     ss.add_argument("-o", type=str, default=None, help="Output folder name")
     ss.add_argument("-nodup", action="store_true", default=False,
                     help="Remove duplicate models using heuristics def=false")
@@ -98,14 +99,15 @@ if __name__ == "__main__":
     ss.add_argument("-gpu", type=int, help="GPU ID to use for CUDA acceleration def=0")
     ss.add_argument("-pdbin", type=str, default=None, help="Input PDB file to be transformed def=None")
     ss.add_argument("-bbonly", type=bool, default=False,
-                    help="Whether to only use backbone atoms for simulated map def=false")
+                      help="Whether to only use backbone atoms for simulated map def=false")
     ss.add_argument("-c", type=int, default=2, help="Number of threads to use def=2")
     ss.add_argument(
         "-res", type=float, default=None,
         help="Resolution of the experimental map used to create simulated map from structure"
     )
     ss.add_argument("-score", type=str, default=None, required=False, help="Path to a list of transformations to score")
-    ss.add_argument("-het", action="store_true", default=False, help="Include HETATMs in the input pdb/cif def=false")
+    ss.add_argument("-batch", type=int, default=None,
+                    help="Override batch size for GPU processing def=auto-detect")
 
     args = parser.parse_args()
 
@@ -127,7 +129,7 @@ if __name__ == "__main__":
         assert args.res is not None, "Please specify resolution when using structure as input."
         # simulate the map at target resolution
         sim_map_path = os.path.join(tempfile.gettempdir(), f"simu_map_{rand_str}.mrc")
-        pdb2vol(args.b, args.res, sim_map_path, backbone_only=args.bbonly, include_hetero=args.het)
+        pdb2vol(args.b, args.res, sim_map_path, backbone_only=args.bbonly)
         assert os.path.exists(sim_map_path), "Failed to create simulated map from structure."
 
         # generate secondary structure assignment for the simulated map if using ss mode
@@ -241,19 +243,6 @@ if __name__ == "__main__":
         # set mrc output path
         trans_mrc_path = args.b if args.mrcout else None
 
-        if args.E:
-            print("### Evaluation Mode ###")
-            _, overlap, cc, pcc, Nm, total, dot = get_score(ref_map, tgt_map.data, tgt_map.vec, np.array((0, 0, 0)))
-            print("Overlap: ", overlap, "CC: ", cc, "PCC: ", pcc, "N: ", Nm, "Total: ", total, "Dot: ", dot)
-            exit(0)
-
-        if args.v:
-            print("### Vector Visualization Mode ###")
-            os.makedirs(args.v, exist_ok=True)
-            ref_map.save_vectors(os.path.join(args.v, "ref_map"))
-            tgt_map.save_vectors(os.path.join(args.v, "tgt_map"))
-            exit(0)
-
         fitter = MapFitter(
             ref_map,
             tgt_map,
@@ -272,6 +261,7 @@ if __name__ == "__main__":
             alpha=None,
             confine_angles=args.al,
             save_vec=args.S,
+            batch_size=args.batch,
         )
         fitter.fit()
 
@@ -357,12 +347,6 @@ if __name__ == "__main__":
         start_init_fitter = time.time()
         print("Resample time: ", start_init_fitter - start_resample_map, " seconds")
 
-        if args.E:
-            print("### Evaluation Mode ###")
-            _, overlap, cc, pcc, Nm, total, dot = get_score(ref_map, tgt_map.data, tgt_map.vec, np.array((0, 0, 0)))
-            print("Overlap: ", overlap, "CC: ", cc, "PCC: ", pcc, "N: ", Nm, "Total: ", total, "Dot: ", dot)
-            exit(0)
-
         fitter = MapFitter(
             ref_map,
             tgt_map,
@@ -380,6 +364,7 @@ if __name__ == "__main__":
             save_mrc=False,
             alpha=args.alpha,
             save_vec=args.S,
+            batch_size=args.batch,
         )
 
         start_fit = time.time()

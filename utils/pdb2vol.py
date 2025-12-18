@@ -7,15 +7,24 @@ import mrcfile
 from scipy.ndimage import fourier_gaussian, gaussian_filter, zoom
 from scipy.fftpack import fftn, ifftn
 
+from tqdm import tqdm
 from numba import njit
 from numba.typed import Dict, List
 
 # Dictionary of atom types and their corresponding masses.
+# atom_mass_dict = {
+#     "H": 1.008,
+#     "C": 12.011,
+#     "N": 14.007,
+#     "O": 15.999,
+#     "P": 30.974,  # for DNA/RNA
+#     "S": 32.066,
+# }
+
 atom_mass_dict = Dict()
 
 atom_mass_dict["H"] = 1.008
 atom_mass_dict["C"] = 12.011
-atom_mass_dict["CA"] = 12.011  # for PDB files without element notations
 atom_mass_dict["N"] = 14.007
 atom_mass_dict["O"] = 15.999
 atom_mass_dict["P"] = 30.974
@@ -25,7 +34,7 @@ phos_backbone_atom_id = ["O5\'", "O3\'", "P", "OP1", "OP2"]
 sugar_ring_atom_id = ["C5\'", "C4\'", "C3\'", "C2\'", "C1\'", "O4\'", "O2\'"]
 
 
-def get_atom_list(pdb_file, backbone_only=False, include_hetero=False):
+def get_atom_list(pdb_file, backbone_only=False):
     """
     Retrieve the coordinates and atom types from a PDB or CIF file.
 
@@ -55,18 +64,15 @@ def get_atom_list(pdb_file, backbone_only=False, include_hetero=False):
         for model in structure:
             for chain in model:
                 for residue in chain:
-                    if "CA" in residue:
+                    if "CA" in residue and "C" in residue and "N" in residue:
                         atom_list.append(residue["CA"].get_coord())
                         atom_type_list.append(residue["CA"].element)
-                        if "C" in residue:
-                            atom_list.append(residue["C"].get_coord())
-                            atom_type_list.append(residue["C"].element)
-                        if "N" in residue:
-                            atom_list.append(residue["N"].get_coord())
-                            atom_type_list.append(residue["N"].element)
-                        if "O" in residue:
-                            atom_list.append(residue["O"].get_coord())
-                            atom_type_list.append(residue["O"].element)
+                        atom_list.append(residue["C"].get_coord())
+                        atom_type_list.append(residue["C"].element)
+                        atom_list.append(residue["N"].get_coord())
+                        atom_type_list.append(residue["N"].element)
+                        # atom_list.append(residue["O"].get_coord())
+                        # atom_type_list.append(residue["O"].element)
                         res_type = "prot"
                     if all([a in residue for a in phos_backbone_atom_id]):
                         for a in phos_backbone_atom_id:
@@ -80,10 +86,8 @@ def get_atom_list(pdb_file, backbone_only=False, include_hetero=False):
                         res_type = "nuc"
     else:
         for atom in structure.get_atoms():
-            # do not include hetero atoms and water
-            if atom.get_full_id()[3][0][0] == " " or include_hetero:
-                atom_list.append(atom.get_coord())
-                atom_type_list.append(atom.element)
+            atom_list.append(atom.get_coord())
+            atom_type_list.append(atom.element)
     return np.array(atom_list), atom_type_list
 
 
@@ -350,7 +354,6 @@ def pdb2vol(
         contour=False,
         bin_mask=False,
         return_data=False,
-        include_hetero=False
 ):
     """
     Convert a PDB or CIF file to a volumetric map in MRC format.
@@ -380,7 +383,7 @@ def pdb2vol(
 
     if input_pdb.split(".")[-1] not in ["pdb", "cif"]:
         raise ValueError("Input file must be a pdb or cif file")
-    atoms, types = get_atom_list(input_pdb, backbone_only=backbone_only, include_hetero=include_hetero)
+    atoms, types = get_atom_list(input_pdb, backbone_only=backbone_only)
 
     if len(atoms) == 0:
         raise ValueError("No atoms found in input file")

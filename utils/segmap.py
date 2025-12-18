@@ -82,8 +82,8 @@ def segment_map(input_map, output_map, contour=0):
 
         (mrc_new.header.origin.x, mrc_new.header.origin.y, mrc_new.header.origin.z) = origin
         mrc_new.update_header_stats()
-        mrc.print_header()
-        mrc_new.print_header()
+        #mrc.print_header()
+        #mrc_new.print_header()
         mrc_new.close()
     return output_map
 

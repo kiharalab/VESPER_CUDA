@@ -4,6 +4,7 @@ from datetime import datetime
 from itertools import product
 
 import numpy as np
+import torch
 from scipy.spatial.transform import Rotation as R
 from scipy.ndimage import laplace
 from tqdm import tqdm
@@ -33,6 +34,7 @@ class MapFitter:
             confine_angles=None,
             save_vec=False,
             score=None,
+            batch_size=None,
     ):
 
         print("###Initializing fitter###")
@@ -47,13 +49,12 @@ class MapFitter:
         self.input_pdb = input_pdb
         self.threads = threads
         self.gpu = gpu
-        if self.gpu:
-            import torch
         self.device = device
         self.topn = topn
         self.outdir = outdir
         self.save_mrc = save_mrc
         self.save_vec = save_vec
+        self.batch_size = batch_size
         self.angle_comb = []
 
         self.result_list = None
@@ -87,10 +88,21 @@ class MapFitter:
             .T
         )
 
+        # Pre-allocate GPU buffers for memory reuse (will be initialized later)
+        self.gpu_buffers = None
+
         # calculate combination of rotation angles
         self._calc_angle_comb()
         # self._calc_angle_comb_quat()
         self.total_rotations = len(self.angle_comb)
+
+        # Pre-compute rotation matrices for all angles
+        print("Pre-computing rotation matrices...")
+        self.rotation_matrices = {}
+        for ang in self.angle_comb:
+            ang_key = tuple(ang)
+            self.rotation_matrices[ang_key] = R.from_euler("xyz", ang, degrees=True).as_matrix().astype(np.float32)
+        print(f"Cached {len(self.rotation_matrices)} rotation matrices")
 
         # if score is not None:
         #     self.refine = False
@@ -180,16 +192,152 @@ class MapFitter:
                 torch.from_numpy(fft_arr).to(self.device).share_memory_() for fft_arr in self.ref_map_fft_list
             ]
 
-            self.new_data_array = torch.zeros_like(self.tgt_map.new_data_gpu, device=self.device)
-            if self.ss_mix_score_mode:
-                self.new_ss_array = torch.zeros_like(self.tgt_map.new_ss_data_gpu, device=self.device)
-            if self.mode == "VecProduct":
-                self.new_vec_array = torch.zeros_like(self.tgt_map.vec_gpu, device=self.device)
+            # Now initialize GPU buffers after GPU tensors are created
+            self._init_gpu_buffers()
+
+            # Create multiple CUDA streams for parallel processing
+            # Use 4 streams for better overlap of computation and memory transfers
+            self.num_streams = 4
+            self.cuda_streams = [torch.cuda.Stream() for _ in range(self.num_streams)]
+            print(f"Created {self.num_streams} CUDA streams for parallel processing")
         else:
             import pyfftw.config
 
             pyfftw.config.PLANNER_EFFORT = "FFTW_MEASURE"
             pyfftw.config.NUM_THREADS = max(os.cpu_count() - 2, 2)  # Maybe the CPU is sweating too much?
+
+    def _get_rotation_matrix(self, rot_ang):
+        """Get cached rotation matrix or compute and cache if not found"""
+        ang_key = tuple(rot_ang)
+        if ang_key not in self.rotation_matrices:
+            self.rotation_matrices[ang_key] = R.from_euler("xyz", rot_ang, degrees=True).as_matrix().astype(np.float32)
+        return self.rotation_matrices[ang_key]
+
+    def _get_optimal_batch_size(self):
+        """Determine optimal batch size based on GPU memory"""
+        if not self.gpu:
+            return 1
+
+        import torch
+
+        # Get GPU memory in GB
+        total_memory = torch.cuda.get_device_properties(self.device).total_memory / (1024**3)
+
+        # Estimate memory per rotation (data + vec + intermediate buffers)
+        # Assuming ~100MB per rotation for typical map sizes
+        dim = self.tgt_map.new_data.shape[0]
+        memory_per_rotation_gb = (dim**3 * 4 * 5) / (1024**3)  # 5 arrays: data, vec, old_pos, new_data, temp
+
+        # Use 70% of GPU memory for batching, rest for FFT operations
+        available_memory = total_memory * 0.7
+        optimal_batch = int(available_memory / memory_per_rotation_gb)
+
+        # Clamp between reasonable bounds
+        optimal_batch = max(8, min(optimal_batch, 256))
+
+        print(f"GPU Memory: {total_memory:.1f}GB, Optimal batch size: {optimal_batch}")
+        return optimal_batch
+
+    def _init_gpu_buffers(self):
+        """Pre-allocate GPU buffers for memory reuse during rotation"""
+        import torch
+
+        self.gpu_buffers = {
+            'data': torch.zeros_like(self.tgt_map.new_data_gpu, device=self.device, dtype=torch.float32),
+            'old_pos': torch.zeros_like(self.tgt_map.search_pos_grid_gpu, device=self.device, dtype=torch.float32),
+        }
+
+        if self.mode == "VecProduct":
+            self.gpu_buffers['vec'] = torch.zeros_like(self.tgt_map.vec_gpu, device=self.device, dtype=torch.float32)
+
+        if self.ss_mix_score_mode and hasattr(self.tgt_map, 'new_ss_data_gpu'):
+            self.gpu_buffers['ss_data'] = torch.zeros_like(self.tgt_map.new_ss_data_gpu, device=self.device,
+                                                           dtype=torch.float32)
+
+    def _rot_and_search_fft_batch(self, rot_ang_batch, return_data=False, timing_stats=None, stream=None):
+        """Process a batch of rotations on GPU"""
+        import torch
+        import time
+
+        if not self.gpu:
+            # Fall back to sequential processing for CPU
+            return [self._rot_and_search_fft(ang, return_data) for ang in rot_ang_batch]
+
+        t0 = time.time() if timing_stats is not None else None
+
+        # Use pre-computed rotation matrices with pinned memory for faster transfer
+        rot_mtx_batch = torch.stack([
+            torch.from_numpy(self._get_rotation_matrix(ang))
+            for ang in rot_ang_batch
+        ])
+        # Pin and transfer asynchronously (will use the current stream)
+        if not rot_mtx_batch.is_pinned():
+            rot_mtx_batch = rot_mtx_batch.pin_memory()
+        rot_mtx_batch = rot_mtx_batch.to(self.device, non_blocking=True)
+
+        if timing_stats is not None:
+            timing_stats['matrix_prep'] += time.time() - t0
+            t0 = time.time()
+
+        # Perform batched rotation (without buffer reuse to avoid reference issues)
+        batch_results = self._gpu_rot_map_batch(
+            self.tgt_map.new_data_gpu,
+            self.tgt_map.vec_gpu if self.mode == "VecProduct" else None,
+            rot_mtx_batch,
+            self.tgt_map.search_pos_grid_gpu,
+            self.device,
+            rot_vec=(self.mode == "VecProduct"),
+            ss_mix_score_mode=False,
+            preallocated_buffers=None  # Disable buffer reuse for now
+        )
+
+        if timing_stats is not None:
+            timing_stats['rotation'] += time.time() - t0
+            t0 = time.time()
+
+        # Pre-create tensors to avoid repeated allocation
+        zero_tensor = torch.tensor([0], device=self.device, dtype=torch.float32) if self.mode != "VecProduct" else None
+        one_tensor = torch.tensor([1], device=self.device, dtype=torch.float32) if self.mode == "Overlap" else None
+
+        # Process FFT for each rotation in batch
+        results = []
+        for idx, (new_vec, new_data, _) in enumerate(batch_results):
+            # Compose query list
+            if self.mode == "VecProduct":
+                x2, y2, z2 = new_vec[..., 0], new_vec[..., 1], new_vec[..., 2]
+                tgt_map_pre_fft_list = [x2, y2, z2]
+            else:
+                x2 = new_data
+                if self.mode == "Overlap":
+                    x2 = torch.where(x2 > zero_tensor, one_tensor, zero_tensor)
+                elif self.mode == "CC":
+                    x2 = torch.where(x2 > zero_tensor, x2, zero_tensor)
+                elif self.mode == "PCC":
+                    x2 = torch.where(x2 > zero_tensor, x2 - self.tgt_map.ave, zero_tensor)
+                tgt_map_pre_fft_list = [x2]
+
+            # Compute FFT
+            fft_result_list = self._fft_get_prod_list(self.ref_map_fft_list_gpu, tgt_map_pre_fft_list)
+
+            # Find best translation
+            score, vox_trans = self._find_best_trans_by_fft_list(fft_result_list, gpu=True)
+
+            # Normalize score
+            if self.mode == "CC":
+                score = score / (self.ref_map.std ** 2)
+            elif self.mode == "PCC":
+                score = score / (self.ref_map.std_norm_ave ** 2)
+
+            if return_data:
+                results.append((score, vox_trans, new_data.cpu().numpy(),
+                              new_vec.cpu().numpy() if new_vec is not None else None))
+            else:
+                results.append((score, vox_trans))
+
+        if timing_stats is not None:
+            timing_stats['fft_and_scoring'] += time.time() - t0
+
+        return results
 
     def fit_ss(self):
         print("###Start Searching###")
@@ -310,29 +458,83 @@ class MapFitter:
     def fit(self):
         print("###Start Searching###")
         self.result_list = []
-        with tqdm(total=len(self.angle_comb)) as pbar:
-            with concurrent.futures.ThreadPoolExecutor(max_workers=self.threads) as executor:
-                futures = {
-                    executor.submit(
-                        self._rot_and_search_fft,
-                        rot_ang,
-                        False,
-                    ): rot_ang
-                    for rot_ang in self.angle_comb
-                }
-                for future in concurrent.futures.as_completed(futures):
-                    rot_ang = futures[future]
-                    result = future.result()
-                    pbar.update(1)
-                    self.result_list.append(
-                        {
-                            "angle": rot_ang,
-                            "score": result[0] / self.ref_map.new_data.size,
-                            "vox_trans": result[1],
-                        }
-                    )
+
+        # Use batched processing on GPU for better performance
+        use_batch = True
+        if self.gpu and use_batch:
+            # Use override batch size if provided, otherwise auto-detect optimal batch size
+            if self.batch_size is not None:
+                batch_size = self.batch_size
+                print(f"Using override batch size: {batch_size}")
+            else:
+                batch_size = self._get_optimal_batch_size()
+
+            # Single-threaded batch processing with CUDA streams for overlap
+            import torch
+
+            with tqdm(total=len(self.angle_comb)) as pbar:
+                # Pre-create batches
+                batches = []
+                for i in range(0, len(self.angle_comb), batch_size):
+                    batches.append(self.angle_comb[i:i + batch_size])
+
+                # Process batches with multiple streams for parallelism
+                # Use a circular queue of streams
+                stream_futures = []
+
+                for batch_idx, batch_angles in enumerate(batches):
+                    stream_id = batch_idx % self.num_streams
+                    stream = self.cuda_streams[stream_id]
+
+                    with torch.cuda.stream(stream):
+                        batch_results = self._rot_and_search_fft_batch(batch_angles, return_data=False, stream=stream)
+
+                        # Store results and stream for later synchronization
+                        stream_futures.append((stream, batch_angles, batch_results))
+
+                    # Synchronize and collect results when we've filled all streams
+                    # This allows overlap between batches on different streams
+                    if len(stream_futures) >= self.num_streams or batch_idx == len(batches) - 1:
+                        for stream, angles, results in stream_futures:
+                            stream.synchronize()
+                            for rot_ang, result in zip(angles, results):
+                                self.result_list.append(
+                                    {
+                                        "angle": rot_ang,
+                                        "score": result[0] / self.ref_map.new_data.size,
+                                        "vox_trans": result[1],
+                                    }
+                                )
+                            pbar.update(len(angles))
+                        stream_futures = []
+
                 for result in self.result_list:
                     result["real_trans"] = self._convert_trans(result["angle"], result["vox_trans"])
+        else:
+            # Use original single-rotation path
+            with tqdm(total=len(self.angle_comb)) as pbar:
+                with concurrent.futures.ThreadPoolExecutor(max_workers=self.threads) as executor:
+                    futures = {
+                        executor.submit(
+                            self._rot_and_search_fft,
+                            rot_ang,
+                            False,
+                        ): rot_ang
+                        for rot_ang in self.angle_comb
+                    }
+                    for future in concurrent.futures.as_completed(futures):
+                        rot_ang = futures[future]
+                        result = future.result()
+                        pbar.update(1)
+                        self.result_list.append(
+                            {
+                                "angle": rot_ang,
+                                "score": result[0] / self.ref_map.new_data.size,
+                                "vox_trans": result[1],
+                            }
+                        )
+                    for result in self.result_list:
+                        result["real_trans"] = self._convert_trans(result["angle"], result["vox_trans"])
 
         # sort the result list
         self.result_list.sort(key=lambda x: x["score"], reverse=True)
@@ -346,6 +548,7 @@ class MapFitter:
         # remove duplicates
         if self.remove_dup:
             self._remove_dup_results()
+            print("#Non-duplicate count: " + str(len(self.result_list)))
             print()
 
         # calculate ldp recall if specified
@@ -354,7 +557,7 @@ class MapFitter:
             print()
 
         if self.ang_interval >= 5:
-            self.refine(1, self.topn, sort_by_ldp_recall=self.ldp_recall_mode)
+            self.refine(2, self.topn, sort_by_ldp_recall=self.ldp_recall_mode)
 
         if self.refined_list:
             self.final_list = self.refined_list[: self.topn]
@@ -377,13 +580,14 @@ class MapFitter:
             self._retrieve_data(self.final_list)
             self._save_topn_vec_as_pdb()
 
-        # if self.save_mrc:
-        #     self._save_topn_mrc()
+        if self.save_mrc:
+            self._save_topn_mrc()
 
     def refine(self, ang_interval, top_n, sort_by_ldp_recall=False):
         print("###Start Refining###")
         self.refined_list = []
         top_n_list = self.result_list[:top_n]
+
         for result in tqdm(top_n_list, desc="Refining Top N", position=0):
             curr_result_list = []
 
@@ -397,37 +601,84 @@ class MapFitter:
             curr_refine_ang_list[curr_refine_ang_list < 0] += 360
             curr_refine_ang_list[curr_refine_ang_list > 360] -= 360
 
-            executor = concurrent.futures.ThreadPoolExecutor(max_workers=self.threads)
-            with tqdm(total=len(curr_refine_ang_list), position=1, leave=False) as pbar:
-                futures = {
-                    executor.submit(
-                        self._rot_and_search_fft,
-                        rot_ang,
-                        False,
-                    ): rot_ang
-                    for rot_ang in curr_refine_ang_list
-                }
-                for future in concurrent.futures.as_completed(futures):
-                    rot_ang = futures[future]
-                    result = future.result()
-                    pbar.update(1)
-                    curr_result_list.append(
-                        {
-                            "angle": rot_ang,
-                            "score": result[0] / self.ref_map.new_data.size,
-                            "vox_trans": result[1],
-                        }
-                    )
-                for result in curr_result_list:
-                    result["real_trans"] = self._convert_trans(result["angle"], result["vox_trans"])
-                if self.ldp_recall_mode:
-                    self._calc_ldp_recall(curr_result_list, progress_bar=False)
+            # Use batched processing on GPU
+            if self.gpu:
+                import torch
+                # Use override batch size if provided, otherwise use all refinement angles in one batch
+                if self.batch_size is not None:
+                    batch_size = min(self.batch_size, len(curr_refine_ang_list))  # Cap at total angles only
+                else:
+                    batch_size = len(curr_refine_ang_list)  # Process all refinement angles in one batch
+
+                with tqdm(total=len(curr_refine_ang_list), position=1, leave=False) as pbar:
+                    # Pre-create batches
+                    batches = []
+                    for i in range(0, len(curr_refine_ang_list), batch_size):
+                        batches.append(curr_refine_ang_list[i:i + batch_size])
+
+                    # Process batches with multiple streams
+                    stream_futures = []
+                    for batch_idx, batch_angles in enumerate(batches):
+                        stream_id = batch_idx % self.num_streams
+                        stream = self.cuda_streams[stream_id]
+
+                        with torch.cuda.stream(stream):
+                            batch_results = self._rot_and_search_fft_batch(batch_angles, return_data=False, stream=stream)
+                            stream_futures.append((stream, batch_angles, batch_results))
+
+                        # Synchronize when filled all streams or reached the end
+                        if len(stream_futures) >= self.num_streams or batch_idx == len(batches) - 1:
+                            for stream, angles, results in stream_futures:
+                                stream.synchronize()
+                                for rot_ang, batch_result in zip(angles, results):
+                                    curr_result_list.append(
+                                        {
+                                            "angle": rot_ang,
+                                            "score": batch_result[0] / self.ref_map.new_data.size,
+                                            "vox_trans": batch_result[1],
+                                        }
+                                    )
+                                pbar.update(len(angles))
+                            stream_futures = []
+
+                    for res in curr_result_list:
+                        res["real_trans"] = self._convert_trans(res["angle"], res["vox_trans"])
+                    if self.ldp_recall_mode:
+                        self._calc_ldp_recall(curr_result_list, progress_bar=False)
+            else:
+                # CPU mode: use thread pool as before
+                executor = concurrent.futures.ThreadPoolExecutor(max_workers=self.threads)
+                with tqdm(total=len(curr_refine_ang_list), position=1, leave=False) as pbar:
+                    futures = {
+                        executor.submit(
+                            self._rot_and_search_fft,
+                            rot_ang,
+                            False,
+                        ): rot_ang
+                        for rot_ang in curr_refine_ang_list
+                    }
+                    for future in concurrent.futures.as_completed(futures):
+                        rot_ang = futures[future]
+                        result = future.result()
+                        pbar.update(1)
+                        curr_result_list.append(
+                            {
+                                "angle": rot_ang,
+                                "score": result[0] / self.ref_map.new_data.size,
+                                "vox_trans": result[1],
+                            }
+                        )
+                    for res in curr_result_list:
+                        res["real_trans"] = self._convert_trans(res["angle"], res["vox_trans"])
+                    if self.ldp_recall_mode:
+                        self._calc_ldp_recall(curr_result_list, progress_bar=False)
+                # close the executor
+                executor.shutdown(wait=True)
+
             if sort_by_ldp_recall and self.ldp_recall_mode:
                 self.refined_list.append(max(curr_result_list, key=lambda x: x["ldp_recall"]))
             else:
                 self.refined_list.append(max(curr_result_list, key=lambda x: x["score"]))
-            # close the executor
-            executor.shutdown(wait=True)
         # sort the refined list
         if sort_by_ldp_recall and self.ldp_recall_mode:
             self.refined_list.sort(key=lambda x: x["ldp_recall"], reverse=True)
@@ -476,7 +727,7 @@ class MapFitter:
             rot_mtx = R.from_euler("xyz", item["angle"], degrees=True).inv().as_matrix()
             angle_str = f"rx{int(item['angle'][0])}_ry{int(item['angle'][1])}_rz{int(item['angle'][2])}"
             trans_str = f"tx{item['real_trans'][0]:.3f}_ty{item['real_trans'][1]:.3f}_tz{item['real_trans'][2]:.3f}"
-            filename = f"#{i}_{angle_str}_{trans_str}"
+            filename = f"#{i}_{angle_str}_{trans_str}.pdb"
             save_rotated_pdb(self.input_pdb, rot_mtx, item["real_trans"], os.path.join(self.outdir, "PDB", filename), i)
 
     def _save_topn_vec_as_pdb(self):
@@ -497,15 +748,15 @@ class MapFitter:
                 i,
             )
 
-    # def _save_topn_mrc(self):
-    #     os.makedirs(os.path.join(self.outdir, "MRC"), exist_ok=True)
-    #     for i, item in enumerate(self.final_list):
-    #         angle_str = f"rx{int(item['angle'][0])}_ry{int(item['angle'][1])}_rz{int(item['angle'][2])}"
-    #         trans_str = f"tx{item['real_trans'][0]:.3f}_ty{item['real_trans'][1]:.3f}_tz{item['real_trans'][2]:.3f}"
-    #         filename = f"#{i}_{angle_str}_{trans_str}.mrc"
-    #         save_rotated_mrc(
-    #             self.tgt_map.mrcfile_path, item["angle"], item["real_trans"], os.path.join(self.outdir, "MRC", filename)
-    #         )
+    def _save_topn_mrc(self):
+        os.makedirs(os.path.join(self.outdir, "MRC"), exist_ok=True)
+        for i, item in enumerate(self.final_list):
+            angle_str = f"rx{int(item['angle'][0])}_ry{int(item['angle'][1])}_rz{int(item['angle'][2])}"
+            trans_str = f"tx{item['real_trans'][0]:.3f}_ty{item['real_trans'][1]:.3f}_tz{item['real_trans'][2]:.3f}"
+            filename = f"#{i}_{angle_str}_{trans_str}.mrc"
+            # save_rotated_mrc(
+            #     self.tgt_map.mrcfile_path, item["angle"], item["real_trans"], os.path.join(self.outdir, "MRC", filename)
+            # )
 
     def _retrieve_data(self, result_list):
         for result in result_list:
@@ -572,36 +823,52 @@ class MapFitter:
     def _remove_dup_results(self):
         no_dup_results = []
 
-        l1_dist_list = []
-
         print("###Start Duplicate Removal###")
 
-        for result in self.result_list:
-            result["quat"] = R.from_euler("xyz", result["angle"], degrees=True).as_quat()
+        # duplicate removal
+        hash_angs = {}
 
-        # # duplicate removal
-        hash_quats = {}
+        # non_dup_count = 0
+
+        # at least 30 degrees apart
+        n_angles_apart = 30 // self.ang_interval  # could be directly specified
+        ang_range = n_angles_apart * int(self.ang_interval)
+        ang_range = int(ang_range)
+
         for result in tqdm(self.result_list, desc="Removing Duplicates"):
             # duplicate removal
-            found = False
-            # compute all pairwise L1 distances to existing rotations in dice
-            for key in hash_quats.keys():
-                # calculate the dot product to check angles apart
-                if np.arccos(np.abs(np.dot(result["quat"], np.array(key)))) < np.radians(30.0):
-                    # found duplicate angles within the interval, check for translation
-                    l1_dist = np.sum(np.abs(hash_quats[key] - result["vox_trans"]))
-                    l1_dist_list.append(l1_dist)
-                    if l1_dist < self.tgt_map.new_dim:
-                        found = True
-                        break
-            if not found:
-                # add to hash
-                hash_quats[tuple(result["quat"])] = np.array(result["vox_trans"])
-                no_dup_results.append(result)
-            if not self.ldp_recall_mode and len(no_dup_results) >= self.topn:
-                break
+            if tuple(result["angle"]) in hash_angs:
+                # print(f"Duplicate: {result_mrc['angle']}")
+                trans = hash_angs[tuple(result["angle"])]
+                # manhattan distance
+                if np.sum(np.abs(trans - result["vox_trans"])) < self.tgt_map.new_dim:
+                    # result_mrc["vec_score"] = 0
+                    continue
 
-        # print("#Non-duplicate count: " + str(len(self.result_list)))
+            # add to hash
+            hash_angs[tuple(result["angle"])] = np.array(result["vox_trans"])
+
+            ang_x, ang_y, ang_z = int(result["angle"][0]), int(result["angle"][1]), int(result["angle"][2])
+
+            # add surrounding angles to hash
+            for xx in range(ang_x - ang_range, ang_x + ang_range + 1, int(self.ang_interval)):
+                for yy in range(ang_y - ang_range, ang_y + ang_range + 1, int(self.ang_interval)):
+                    for zz in range(ang_z - ang_range, ang_z + ang_range + 1, int(self.ang_interval)):
+                        x_positive = xx % 360
+                        y_positive = yy % 360
+                        z_positive = zz % 180
+
+                        x_positive = x_positive + 360 if x_positive < 0 else x_positive
+                        y_positive = y_positive + 360 if y_positive < 0 else y_positive
+                        z_positive = z_positive + 180 if z_positive < 0 else z_positive
+
+                        curr_trans = np.array([x_positive, y_positive, z_positive]).astype(np.float64)
+                        # insert into hash
+                        hash_angs[tuple(curr_trans)] = np.array(result["vox_trans"])
+
+            # non_dup_count += 1
+            no_dup_results.append(result)
+
         self.result_list = no_dup_results
 
     @staticmethod
@@ -647,7 +914,8 @@ class MapFitter:
             trans[2] -= self.tgt_map.new_dim
 
         tgt_new_cent = r.apply(self.tgt_map.new_cent)  # rotate the center
-        real_trans = self.ref_map.new_cent - (tgt_new_cent + trans * self.tgt_map.new_width)  # calculate new translation
+        real_trans = self.ref_map.new_cent - (
+                tgt_new_cent + trans * self.tgt_map.new_width)  # calculate new translation
         return real_trans
 
     def _rot_and_search_fft_ss(self, rot_ang, return_data, v_ave, v_std, ss_ave, ss_std):
@@ -655,7 +923,8 @@ class MapFitter:
         if self.gpu:
             import torch
 
-            rot_mtx = euler_to_mtx(torch.tensor(np.radians(rot_ang), device=self.device, dtype=torch.float32))
+            # Use pre-computed rotation matrix
+            rot_mtx = torch.from_numpy(self._get_rotation_matrix(rot_ang)).to(self.device)
             new_vec, new_data, new_ss_data = self._gpu_rot_map(
                 self.tgt_map.new_data_gpu,
                 self.tgt_map.vec_gpu,
@@ -667,7 +936,8 @@ class MapFitter:
                 tgt_map_ss_data=self.tgt_map.new_ss_data_gpu,
             )
         else:
-            rot_mtx = R.from_euler("xyz", rot_ang, degrees=True).as_matrix().astype(np.float32)
+            # Use pre-computed rotation matrix
+            rot_mtx = self._get_rotation_matrix(rot_ang)
             new_vec, new_data, new_ss_data = self._rot_map(
                 self.tgt_map.new_data,
                 self.tgt_map.vec,
@@ -729,9 +999,8 @@ class MapFitter:
         if self.gpu:
             import torch
 
-            rot_mtx = R.from_euler("xyz", rot_ang, degrees=True).as_matrix().astype(np.float32)
-            rot_mtx = torch.from_numpy(rot_mtx).to(self.device)
-            # rot_mtx = euler_to_mtx(torch.tensor(np.radians(rot_ang), device=self.device, dtype=torch.float32))
+            # Use pre-computed rotation matrix
+            rot_mtx = torch.from_numpy(self._get_rotation_matrix(rot_ang)).to(self.device)
             new_vec, new_data, _ = self._gpu_rot_map(
                 self.tgt_map.new_data_gpu,
                 self.tgt_map.vec_gpu,
@@ -741,7 +1010,8 @@ class MapFitter:
                 rot_vec=(self.mode == "VecProduct"),
             )
         else:
-            rot_mtx = R.from_euler("xyz", rot_ang, degrees=True).as_matrix().astype(np.float32)
+            # Use pre-computed rotation matrix
+            rot_mtx = self._get_rotation_matrix(rot_ang)
             new_vec, new_data, _ = self._rot_map(
                 self.tgt_map.new_data,
                 self.tgt_map.vec,
@@ -810,44 +1080,168 @@ class MapFitter:
     @staticmethod
     def _gpu_rot_map(data, vec, mtx, new_pos_grid, device, rot_vec=True, ss_mix_score_mode=False, tgt_map_ss_data=None):
         import torch
-        
+
         with torch.no_grad():
+            # set the dimension to be x dimension as all dimension are the same
             dim = data.shape[0]
+
+            # set the rotation center
             cent = 0.5 * float(dim)
-            cent = torch.tensor(cent, device=device, dtype=torch.float32)
-            
-            # Calculate all positions in one go
+            cent = torch.tensor(cent, device=device, dtype=torch.float32, requires_grad=False)
+
+            # get relative new positions from center
             new_pos = new_pos_grid - cent
+
+            # reversely rotate the new position lists to get old positions
+            # old_pos = torch.einsum("ij, kj->ki", mtx.T, new_pos) + cent
             old_pos = new_pos @ mtx + cent
+
+            # round old positions to nearest integer
             old_pos.round_()
-            
-            # Create mask and get valid positions
+
+            # init new vec and dens array
+            new_data_array = torch.zeros_like(data, device=device, dtype=torch.float32, requires_grad=False)
+
             in_bound_mask = torch.all((old_pos >= 0) & (old_pos < dim), axis=1)
-            valid_old_pos = old_pos[in_bound_mask].long()
+
+            # get valid old positions in bound
+            valid_old_pos = (old_pos[in_bound_mask]).long()
+
+            # get nonzero density positions in the map
+            # non_zero_mask = data[valid_old_pos[:, 0], valid_old_pos[:, 1], valid_old_pos[:, 2]] > 0
+
+            # apply nonzero mask to valid positions
+            # non_zero_old_pos = valid_old_pos[non_zero_mask]
+
+            # get corresponding new positions
+            # new_pos = (new_pos[in_bound_mask][non_zero_mask] + cent).long()
             new_pos = new_pos[in_bound_mask].add_(cent).long()
-            
-            # Use scatter_ for faster assignment
-            new_data_array = torch.zeros_like(data, device=device)
-            indices = new_pos.t()
-            values = data[valid_old_pos[:, 0], valid_old_pos[:, 1], valid_old_pos[:, 2]]
-            new_data_array.index_put_((indices[0], indices[1], indices[2]), values)
-            
+
+            # fill new density entries
+            new_data_array[new_pos[:, 0], new_pos[:, 1], new_pos[:, 2]] = data[
+                valid_old_pos[:, 0], valid_old_pos[:, 1], valid_old_pos[:, 2]
+            ]
+
             if ss_mix_score_mode:
-                new_ss_array = torch.zeros_like(tgt_map_ss_data, device=device)
-                ss_values = tgt_map_ss_data[valid_old_pos[:, 0], valid_old_pos[:, 1], valid_old_pos[:, 2]]
-                new_ss_array.index_put_((indices[0], indices[1], indices[2]), ss_values)
+                new_ss_array = torch.zeros_like(tgt_map_ss_data, device=device, dtype=torch.float32,
+                                                requires_grad=False)
+                new_ss_array[new_pos[:, 0], new_pos[:, 1], new_pos[:, 2]] = tgt_map_ss_data[
+                    valid_old_pos[:, 0], valid_old_pos[:, 1], valid_old_pos[:, 2]
+                ]
             else:
                 new_ss_array = None
-            
+
             if rot_vec:
-                new_vec_array = torch.zeros_like(vec, device=device)
-                vec_values = vec[valid_old_pos[:, 0], valid_old_pos[:, 1], valid_old_pos[:, 2]]
-                rotated_vecs = vec_values @ mtx.T
-                new_vec_array.index_put_((indices[0], indices[1], indices[2]), rotated_vecs)
+                new_vec_array = torch.zeros_like(vec, device=device, dtype=torch.float32, requires_grad=False)
+                # fetch and rotate the vectors
+                non_zero_vecs = vec[valid_old_pos[:, 0], valid_old_pos[:, 1], valid_old_pos[:, 2]]
+
+                new_vec = non_zero_vecs @ mtx.T
+
+                # fill new vector entries
+                new_vec_array[new_pos[:, 0], new_pos[:, 1], new_pos[:, 2]] = new_vec
             else:
                 new_vec_array = None
-            
-            return new_vec_array, new_data_array, new_ss_array
+
+        return new_vec_array, new_data_array, new_ss_array
+
+    @staticmethod
+    def _gpu_rot_map_batch(data, vec, mtx_batch, new_pos_grid, device, rot_vec=True, ss_mix_score_mode=False,
+                           tgt_map_ss_data=None, preallocated_buffers=None):
+        """
+        Batch rotation on GPU with optional memory reuse.
+        Args:
+            data: density data tensor
+            vec: vector data tensor
+            mtx_batch: batch of rotation matrices [batch_size, 3, 3]
+            new_pos_grid: position grid
+            device: torch device
+            rot_vec: whether to rotate vectors
+            ss_mix_score_mode: whether to use secondary structure scoring
+            tgt_map_ss_data: secondary structure data
+            preallocated_buffers: dict with pre-allocated tensors for reuse
+        Returns:
+            List of (new_vec_array, new_data_array, new_ss_array) for each rotation
+        """
+        import torch
+
+        with torch.no_grad():
+            batch_size = mtx_batch.shape[0]
+            dim = data.shape[0]
+            cent = 0.5 * float(dim)
+            cent_tensor = torch.tensor(cent, device=device, dtype=torch.float32, requires_grad=False)
+
+            # Get relative new positions from center (shared across batch)
+            new_pos_centered = new_pos_grid - cent_tensor
+
+            # Pre-allocate output lists
+            results = []
+
+            for batch_idx in range(batch_size):
+                mtx = mtx_batch[batch_idx]
+
+                # Reuse buffers if provided
+                if preallocated_buffers is not None:
+                    new_data_array = preallocated_buffers['data'].zero_()
+                    old_pos = preallocated_buffers['old_pos']
+                    old_pos.copy_(new_pos_centered @ mtx + cent_tensor)
+                else:
+                    old_pos = new_pos_centered @ mtx + cent_tensor
+                    new_data_array = torch.zeros_like(data, device=device, dtype=torch.float32, requires_grad=False)
+
+                # Round old positions to nearest integer
+                old_pos.round_()
+
+                # Filter in-bound positions
+                in_bound_mask = torch.all((old_pos >= 0) & (old_pos < dim), axis=1)
+                valid_old_pos = old_pos[in_bound_mask].long()
+
+                # Get corresponding new positions (without non-zero filtering to match original behavior)
+                new_pos = (new_pos_centered[in_bound_mask] + cent_tensor).long()
+
+                # Fill new density entries
+                new_data_array[new_pos[:, 0], new_pos[:, 1], new_pos[:, 2]] = data[
+                    valid_old_pos[:, 0], valid_old_pos[:, 1], valid_old_pos[:, 2]
+                ]
+
+                # Handle secondary structure data
+                if ss_mix_score_mode:
+                    if preallocated_buffers is not None and 'ss_data' in preallocated_buffers:
+                        new_ss_array = preallocated_buffers['ss_data'].zero_()
+                    else:
+                        new_ss_array = torch.zeros_like(tgt_map_ss_data, device=device, dtype=torch.float32,
+                                                        requires_grad=False)
+                    new_ss_array[new_pos[:, 0], new_pos[:, 1], new_pos[:, 2]] = tgt_map_ss_data[
+                        valid_old_pos[:, 0], valid_old_pos[:, 1], valid_old_pos[:, 2]
+                    ]
+                else:
+                    new_ss_array = None
+
+                # Handle vector rotation
+                if rot_vec:
+                    if preallocated_buffers is not None and 'vec' in preallocated_buffers:
+                        new_vec_array = preallocated_buffers['vec'].zero_()
+                    else:
+                        new_vec_array = torch.zeros_like(vec, device=device, dtype=torch.float32, requires_grad=False)
+
+                    # Fetch and rotate the vectors
+                    old_vecs = vec[valid_old_pos[:, 0], valid_old_pos[:, 1], valid_old_pos[:, 2]]
+                    new_vec = old_vecs @ mtx.T
+
+                    # Fill new vector entries
+                    new_vec_array[new_pos[:, 0], new_pos[:, 1], new_pos[:, 2]] = new_vec
+                else:
+                    new_vec_array = None
+
+                # No need to clone - append the tensors directly
+                # Each iteration creates new tensors or zeros existing buffers
+                results.append((
+                    new_vec_array,
+                    new_data_array,
+                    new_ss_array
+                ))
+
+            return results
 
     @staticmethod
     def _rot_map(data, vec, mtx, new_pos_grid, rot_vec=True, ss_mix_score_mode=False, tgt_map_ss_data=None):
@@ -1007,7 +1401,3 @@ class MapFitter:
             if quat not in seen:
                 seen.add(quat)
                 self.angle_comb.append(ang)
-
-    def _eval_current_trans(self, rot_ang, trans):
-        self._rot_and_search_fft(rot_ang, False, None, None, None, None)
-        return self._find_best_trans_by_fft_list_ss(self.result_list, self.alpha, self.vec_score_mean, self.vec_score_std, self.ss_score_mean, self.ss_score_std, self.gpu)

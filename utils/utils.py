@@ -119,26 +119,3 @@ def get_score(ref_map, tgt_map_data, tgt_map_vec, trans):
     dot = sco_sum
 
     return sco_arr, overlap, cc, pcc, Nm, total, dot
-
-
-def replace_atom_numbers_with_regex(input_pdb):
-    # Define the regex pattern to match lines starting with ATOM or HETATM
-    import re
-    pattern = re.compile(r'^(ATOM  |HETATM)(\s*\d*)(.*)$')
-
-    with open(input_pdb, 'r') as infile:
-        lines = infile.readlines()
-
-    with open(input_pdb, 'w') as outfile:
-        for line in lines:
-            match = pattern.match(line)
-            if match:
-                atom_number = int(match.group(2))
-                if atom_number > 99999:
-                    # Replace atom number with 99999 while maintaining the same format
-                    new_line = f"{match.group(1)}99999{match.group(3)}\n"
-                    outfile.write(new_line)
-                else:
-                    outfile.write(line)
-            else:
-                outfile.write(line)

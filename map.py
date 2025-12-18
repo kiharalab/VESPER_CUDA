@@ -1,5 +1,4 @@
 import copy
-import os.path
 
 import mrcfile
 import numpy as np
@@ -151,10 +150,10 @@ class EMmap:
         # in_bound_and_non_zero_new_pos = new_pos[in_bound_mask][non_zero_mask]
 
         # with ProgressBar(total=len(in_bound_and_non_zero_old_pos)) as progress:
-        # res_data, res_vec, res_ss_data = do_resample_and_vec(self.xwidth, src_dims, self.data, self.new_dim, dreso,
-        #                                                      self.ss_data, in_bound_and_non_zero_old_pos,
-        #                                                      in_bound_and_non_zero_new_pos,
-        #                                                      progress_proxy=progress)
+            # res_data, res_vec, res_ss_data = do_resample_and_vec(self.xwidth, src_dims, self.data, self.new_dim, dreso,
+            #                                                      self.ss_data, in_bound_and_non_zero_old_pos,
+            #                                                      in_bound_and_non_zero_new_pos,
+            #                                                      progress_proxy=progress)
 
         res_data, res_vec, res_ss_data = do_resample_and_vec(
             self.xwidth,
@@ -213,17 +212,6 @@ class EMmap:
         self.std_norm_ave = std_norm_ave
 
 
-    def save_vectors(self, save_path):
-        print("Saving vectors to: " + save_path)
-        coords = np.array(np.nonzero(self.new_data)).T
-        real_coords = self.new_orig + coords * self.new_width
-        vectors = self.vec[np.nonzero(self.new_data)]
-        print(vectors.shape)
-        print(real_coords.shape)
-        np.save(save_path + "_coords.npy", real_coords)
-        np.save(save_path + "_vecs.npy", vectors)
-
-
 def unify_dims(map_list, voxel_size):
     """
     The unify_dims function takes a list of EM maps and a voxel size as input.
@@ -250,13 +238,13 @@ def calc(stp, endp, pos, data, fsiv):
 
     for xp in range(stp[0], endp[0]):
         rx = float(xp) - pos[0]
-        rx = rx ** 2
+        rx = rx**2
         for yp in range(stp[1], endp[1]):
             ry = float(yp) - pos[1]
-            ry = ry ** 2
+            ry = ry**2
             for zp in range(stp[2], endp[2]):
                 rz = float(zp) - pos[2]
-                rz = rz ** 2
+                rz = rz**2
                 d2 = rx + ry + rz
                 v = data[xp][yp][zp] * np.exp(-1.5 * d2 * fsiv)
                 dtotal += v
@@ -269,15 +257,15 @@ def calc(stp, endp, pos, data, fsiv):
 
 @jit(nopython=True)
 def do_resample_and_vec(
-        src_xwidth,
-        src_orig,
-        src_dims,
-        src_data,
-        dest_xwidth,
-        dest_orig,
-        new_dim,
-        dreso,
-        ss_data,
+    src_xwidth,
+    src_orig,
+    src_dims,
+    src_data,
+    dest_xwidth,
+    dest_orig,
+    new_dim,
+    dreso,
+    ss_data,
 ):
     """
     The do_resample_and_vec function takes in the following parameters:
@@ -300,7 +288,7 @@ def do_resample_and_vec(
 
     gstep = src_xwidth
     fs = (dreso / gstep) * 0.5
-    fs = fs ** 2
+    fs = fs**2
     fsiv = 1.0 / fs
     fmaxd = (dreso / gstep) * 2.0
     print("#maxd=", fmaxd)
@@ -320,12 +308,12 @@ def do_resample_and_vec(
                 # check density
 
                 if (
-                        pos[0] < 0
-                        or pos[1] < 0
-                        or pos[2] < 0
-                        or pos[0] >= src_dims[0]
-                        or pos[1] >= src_dims[1]
-                        or pos[2] >= src_dims[2]
+                    pos[0] < 0
+                    or pos[1] < 0
+                    or pos[2] < 0
+                    or pos[0] >= src_dims[0]
+                    or pos[1] >= src_dims[1]
+                    or pos[2] >= src_dims[2]
                 ):
                     continue
 
