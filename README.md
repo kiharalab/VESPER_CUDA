@@ -68,7 +68,7 @@ uv add git+https://github.com/kiharalab/VESPER_CUDA.git
 uv pip install git+https://github.com/kiharalab/VESPER_CUDA.git
 
 # Install PyTorch for CUDA acceleration (optional)
-uv add torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+uv add torch torchvision torchaudio
 ```
 
 <!-- # VESPER_Python protocol
