@@ -142,6 +142,10 @@ class EMmap:
         from pyfftw import pyfftw
 
         new_dim = pyfftw.next_fast_len(int(tmp_size))
+        # never an odd grid: the correlation's inverse rfft (fitter._fft_get_prod_list) assumes an even last axis,
+        # so on an odd grid it returns dim - 1 points that are not the cross-correlation
+        while new_dim % 2:
+            new_dim = pyfftw.next_fast_len(new_dim + 1)
 
         # set new origins
         self.new_orig = self.new_cent - 0.5 * new_dim * voxel_size
