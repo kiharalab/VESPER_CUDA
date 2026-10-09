@@ -6,6 +6,7 @@ import shutil
 import time
 from types import SimpleNamespace
 
+import click
 import pytest
 from test_multi_map import _grid
 from typer.testing import CliRunner
@@ -64,7 +65,7 @@ def test_empty_rotation_set_is_refused(inputs):
 
 
 def _message(text):
-    return pytest.raises(ValueError, match=f"^{re.escape(text)}$")
+    return pytest.raises(click.UsageError, match=f"^{re.escape(text)}$")
 
 
 def _check(**changes):
@@ -105,8 +106,8 @@ def test_cli_refuses_a_missing_pdbin(tmp_path, monkeypatch):
         app,
         ["orig", "-a", "a.mrc", "-b", "t.mrc", "-pdbin", "gone.pdb"],
     )
-    assert isinstance(result.exception, ValueError)
-    assert str(result.exception) == "-pdbin gone.pdb does not exist"
+    assert result.exit_code == 2
+    assert "-pdbin gone.pdb does not exist" in result.stderr
 
 
 class _NoSearch:

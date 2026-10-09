@@ -6,6 +6,7 @@ import shutil
 from types import SimpleNamespace
 from typing import ClassVar
 
+import click
 import numpy as np
 import pytest
 from typer.testing import CliRunner
@@ -15,7 +16,7 @@ from vesper.cli import app, check_ref_grids, validate_ref_args
 
 
 def _raises(message):
-    return pytest.raises(ValueError, match=f"^{re.escape(message)}$")
+    return pytest.raises(click.UsageError, match=f"^{re.escape(message)}$")
 
 
 @pytest.mark.parametrize("maps", ["", ",", ",,"])
@@ -106,7 +107,9 @@ def test_maps_on_one_grid_pass():
 
 
 def test_maps_centred_apart_are_refused():
-    with pytest.raises(ValueError, match=r"^ref 1 is centred differently from ref 0 "):
+    with pytest.raises(
+        click.UsageError, match=r"^ref 1 is centred differently from ref 0 "
+    ):
         check_ref_grids([_ref([0, 0, 0]), _ref([0, 1.6, 0])], voxel_spacing=3.0)
 
 
@@ -127,11 +130,11 @@ def test_missing_maps_exit_1_naming_each(tmp_path, monkeypatch):
     assert "[ERROR] ref map missing or unreadable: also.mrc" in result.stderr
 
 
-def test_cli_raises_the_check_message(tmp_path, monkeypatch):
+def test_cli_reports_the_check_message_as_a_usage_error(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     result = CliRunner().invoke(app, ["orig", "-a", "a.mrc,b.mrc", "-b", "t.mrc"])
-    assert isinstance(result.exception, ValueError)
-    assert str(result.exception) == "-labels required when -a has multiple paths"
+    assert result.exit_code == 2
+    assert "-labels required when -a has multiple paths" in result.stderr
 
 
 class _RecordingFitter:
