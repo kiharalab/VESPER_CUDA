@@ -141,7 +141,7 @@ def get_score(ref_map, tgt_map_data, tgt_map_vec, trans):
     d2 = tgt_map_data[search_pos[:, 0], search_pos[:, 1], search_pos[:, 2]]
 
     d1 = np.where(d1 <= 0, 0.0, d1)  # trim negative values
-    d2 = np.where(d2 <= 0, 0.0, d1)  # trim negative values
+    d2 = np.where(d2 <= 0, 0.0, d2)  # trim negative values
 
     pd1 = np.where(d1 <= 0, 0.0, d1 - ave1)  # trim negative values
     pd2 = np.where(d2 <= 0, 0.0, d2 - ave2)  # trim negative values
