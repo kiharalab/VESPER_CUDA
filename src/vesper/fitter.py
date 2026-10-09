@@ -127,6 +127,10 @@ class MapFitter:
 
         # calculate combination of rotation angles
         self._calc_angle_comb()
+        if len(self.angle_comb) == 0:
+            raise ValueError(
+                "No rotations to search: check -A (angle spacing) and -al (angle limit)"
+            )
         # self._calc_angle_comb_quat()
         self.total_rotations = len(self.angle_comb)
 

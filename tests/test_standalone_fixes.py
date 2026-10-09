@@ -51,3 +51,8 @@ def test_normalized_score_with_no_spread(capsys, std):
     MapFitter._print_result_item(fitter, item, 0)
     expected = "0.000000" if std == 0 else "1.000000"
     assert f"Normalized Score= {expected}\n" in capsys.readouterr().out
+
+
+def test_empty_rotation_set_is_refused(inputs):
+    with pytest.raises(ValueError, match=r"^No rotations to search: check -A "):
+        _fitter(inputs, confine_angles=-1)
