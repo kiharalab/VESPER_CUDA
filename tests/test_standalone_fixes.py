@@ -2,7 +2,9 @@
 
 import concurrent.futures
 import time
+from types import SimpleNamespace
 
+import pytest
 from test_multi_map import _grid
 
 from vesper.fitter import MapFitter
@@ -35,3 +37,17 @@ def test_cpu_results_come_back_in_angle_order(inputs, monkeypatch):
     monkeypatch.setattr(fitter, "_finish_selected_map", lambda: None)
     fitter.fit()
     assert [tuple(a) for a in seen] == angles
+
+
+@pytest.mark.parametrize("std", [0.0, 2.0])
+def test_normalized_score_with_no_spread(capsys, std):
+    fitter = SimpleNamespace(score_ave=1.0, score_std=std, ldp_recall_mode=False)
+    item = {
+        "angle": (0, 0, 0),
+        "real_trans": (0.0, 0.0, 0.0),
+        "score": 3.0,
+        "vox_trans": (0, 0, 0),
+    }
+    MapFitter._print_result_item(fitter, item, 0)
+    expected = "0.000000" if std == 0 else "1.000000"
+    assert f"Normalized Score= {expected}\n" in capsys.readouterr().out

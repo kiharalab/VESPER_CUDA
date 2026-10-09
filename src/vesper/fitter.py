@@ -1185,7 +1185,11 @@ class MapFitter:
         )
 
         print("Score=", "{:.6f}".format(item["score"]))
-        norm_score = (item["score"] - self.score_ave) / self.score_std
+        norm_score = (
+            (item["score"] - self.score_ave) / self.score_std
+            if self.score_std > 0
+            else 0.0
+        )
         print(f"Voxel Trans= {item['vox_trans']}, Normalized Score= {norm_score:.6f}")
 
         if self.ldp_recall_mode:
