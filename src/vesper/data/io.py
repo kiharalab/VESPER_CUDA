@@ -83,8 +83,8 @@ def save_rotated_pdb(
             coords[:, 1] = [float(y) for y in y_list]
             coords[:, 2] = [float(z) for z in z_list]
 
-            # Transform: new_coord = (old_coord @ rot_mtx.T) + real_trans
-            transformed = coords @ rot_mtx.T + real_trans
+            # Same as Biopython's structure.transform(rot_mtx, real_trans) above
+            transformed = coords @ rot_mtx + real_trans
 
             # Write PDB format
             with open(save_path + ".pdb", "w") as f:
