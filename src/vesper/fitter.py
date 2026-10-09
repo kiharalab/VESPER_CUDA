@@ -316,7 +316,8 @@ class MapFitter:
                     ]
                 )
 
-        return fft_list
+        # complex64 whatever the numpy version, so both paths agree
+        return [fft_arr.astype(np.complex64) for fft_arr in fft_list]
 
     def _get_rotation_matrix(self, rot_ang):
         """Get cached rotation matrix or compute and cache if not found"""
