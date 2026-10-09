@@ -467,6 +467,9 @@ class MapFitter:
                     x2 = torch.where(
                         x2 > zero_tensor, x2 - self.tgt_map.ave, zero_tensor
                     )  # ty:ignore[no-matching-overload]
+                elif self.mode == "L":
+                    x2 = laplace(x2.cpu().numpy(), mode="constant", cval=0.0)
+                    x2 = torch.from_numpy(x2).to(self.device)
                 tgt_map_pre_fft_list = [x2]
 
             # Find best translation in each map
