@@ -78,7 +78,6 @@ def validate_search_args(
     refine_top: int,
     angle_limit: float | None,
     batch_size: int | None,
-    output_dir: str | None,
     pdbin: str | None,
 ) -> None:
     """Reject values that leave the search with nothing to do or nothing to write"""
@@ -90,10 +89,8 @@ def validate_search_args(
         raise ValueError(f"-batch must be >= 1; got {batch_size}")
     if angle_limit is not None and angle_limit < 0:
         raise ValueError(f"-al (angle limit) must be >= 0; got {angle_limit}")
-    if output_dir and pdbin and not os.path.exists(pdbin):
-        raise ValueError(
-            f"-pdbin {pdbin} does not exist, so nothing would be written to -o {output_dir}"
-        )
+    if pdbin and not os.path.exists(pdbin):
+        raise ValueError(f"-pdbin {pdbin} does not exist")
 
 
 def check_ref_paths_exist(ref_paths: list[str]) -> None:
@@ -240,9 +237,7 @@ def orig_command(
     ref_paths, ref_labels, ldp_paths = validate_ref_args(
         map1, labels, ldp_file, ca_file, direct_fit
     )
-    validate_search_args(
-        angle_spacing, refine_top, angle_limit, batch_size, output_dir, pdbin
-    )
+    validate_search_args(angle_spacing, refine_top, angle_limit, batch_size, pdbin)
     check_ref_paths_exist(ref_paths)
 
     mode_val = mode.value if isinstance(mode, Mode) else mode

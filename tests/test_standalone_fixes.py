@@ -2,6 +2,7 @@
 
 import concurrent.futures
 import re
+import shutil
 import time
 from types import SimpleNamespace
 
@@ -9,6 +10,7 @@ import pytest
 from test_multi_map import _grid
 from typer.testing import CliRunner
 
+from vesper import cli
 from vesper.cli import app, validate_search_args
 from vesper.fitter import MapFitter
 
@@ -71,7 +73,6 @@ def _check(**changes):
         "refine_top": 10,
         "angle_limit": None,
         "batch_size": None,
-        "output_dir": None,
         "pdbin": None,
     }
     validate_search_args(**{**args, **changes})
@@ -90,10 +91,7 @@ def test_default_search_args_pass():
         ({"refine_top": 0}, "-N (models to refine) must be >= 1; got 0"),
         ({"batch_size": 0}, "-batch must be >= 1; got 0"),
         ({"angle_limit": -1.0}, "-al (angle limit) must be >= 0; got -1.0"),
-        (
-            {"output_dir": "out", "pdbin": "gone.pdb"},
-            "-pdbin gone.pdb does not exist, so nothing would be written to -o out",
-        ),
+        ({"pdbin": "gone.pdb"}, "-pdbin gone.pdb does not exist"),
     ],
 )
 def test_bad_search_args(change, message):
@@ -105,7 +103,29 @@ def test_cli_refuses_a_missing_pdbin(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     result = CliRunner().invoke(
         app,
-        ["orig", "-a", "a.mrc", "-b", "t.mrc", "-pdbin", "gone.pdb", "-o", "out"],
+        ["orig", "-a", "a.mrc", "-b", "t.mrc", "-pdbin", "gone.pdb"],
     )
     assert isinstance(result.exception, ValueError)
-    assert str(result.exception).startswith("-pdbin gone.pdb does not exist")
+    assert str(result.exception) == "-pdbin gone.pdb does not exist"
+
+
+class _NoSearch:
+    """Stands in for MapFitter: searches nothing."""
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def fit(self):
+        pass
+
+
+@pytest.mark.parametrize("out", [[], ["-o", "out"]])
+def test_pdbin_stays_optional(inputs, tmp_path, monkeypatch, out):
+    for name in ("a.mrc", "target.mrc"):
+        shutil.copy(inputs / name, tmp_path)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(cli, "MapFitter", _NoSearch)
+    args = ["orig", "-a", "a.mrc", "-b", "target.mrc", "-t", "0.05", "-T", "0.05"]
+    result = CliRunner().invoke(app, [*args, "-s", "3", "-g", "8", *out])
+    assert result.exit_code == 0, result.output
+    assert "No input PDB file, skipping transformation" in result.stdout
