@@ -1406,7 +1406,7 @@ class MapFitter:
         map_results = []
         for i in ref_ids:
             fft_result_list = self._fft_get_prod_list(
-                ref_map_fft_lists[i], tgt_map_fft_list
+                ref_map_fft_lists[i], tgt_map_fft_list, sum_channels=True
             )
             score, vox_trans = self._find_best_trans_by_fft_list(
                 fft_result_list, gpu=self.gpu
@@ -1721,24 +1721,23 @@ class MapFitter:
 
             return [numpy_fft.rfftn(tgt_real) for tgt_real in tgt_map_pre_fft_list]
 
-    def _fft_get_prod_list(self, ref_map_fft_list, tgt_map_fft_list):
-        dot_product_list = []
+    def _fft_get_prod_list(
+        self, ref_map_fft_list, tgt_map_fft_list, sum_channels=False
+    ):
+        """Inverse transforms of the channels' products, or of their sum (one entry)"""
+        products = (
+            ref_fourier * tgt_fourier
+            for ref_fourier, tgt_fourier in zip(ref_map_fft_list, tgt_map_fft_list)
+        )
+        if sum_channels:
+            products = [sum(products)]
         if self.gpu:
             import torch
 
-            for ref_fourier, tgt_fourier in zip(ref_map_fft_list, tgt_map_fft_list):
-                dot_fourier = ref_fourier * tgt_fourier
-                dot_real = torch.fft.irfftn(dot_fourier, norm="forward")
-                dot_product_list.append(dot_real)
-        else:
-            from pyfftw.interfaces import numpy_fft
+            return [torch.fft.irfftn(dot, norm="forward") for dot in products]
+        from pyfftw.interfaces import numpy_fft
 
-            for ref_fourier, tgt_fourier in zip(ref_map_fft_list, tgt_map_fft_list):
-                dot_fourier = ref_fourier * tgt_fourier
-                dot_real = numpy_fft.irfftn(dot_fourier, norm="forward")
-                dot_product_list.append(dot_real)
-
-        return dot_product_list
+        return [numpy_fft.irfftn(dot, norm="forward") for dot in products]
 
     @staticmethod
     def _find_best_trans_by_fft_list(fft_result_list, gpu=False):
