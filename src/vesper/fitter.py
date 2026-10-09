@@ -678,17 +678,20 @@ class MapFitter:
                 with concurrent.futures.ThreadPoolExecutor(
                     max_workers=self.threads
                 ) as executor:
-                    futures = {
-                        executor.submit(
-                            self._rot_and_search_fft,
+                    futures = [
+                        (
                             rot_ang,
-                            False,
-                            ref_ids,
-                        ): rot_ang
+                            executor.submit(
+                                self._rot_and_search_fft,
+                                rot_ang,
+                                False,
+                                ref_ids,
+                            ),
+                        )
                         for rot_ang in self.angle_comb
-                    }
-                    for future in concurrent.futures.as_completed(futures):
-                        rot_ang = futures[future]
+                    ]
+                    # in angle order, so that tied scores do not depend on timing
+                    for rot_ang, future in futures:
                         map_results = future.result()
                         pbar.update(1)
                         self._add_search_results(search_lists, rot_ang, map_results)
@@ -874,16 +877,19 @@ class MapFitter:
                 with tqdm(
                     total=len(curr_refine_ang_list), position=1, leave=False
                 ) as pbar:
-                    futures = {
-                        executor.submit(
-                            self._rot_and_search_fft,
+                    futures = [
+                        (
                             rot_ang,
-                            False,
-                        ): rot_ang
+                            executor.submit(
+                                self._rot_and_search_fft,
+                                rot_ang,
+                                False,
+                            ),
+                        )
                         for rot_ang in curr_refine_ang_list
-                    }
-                    for future in concurrent.futures.as_completed(futures):
-                        rot_ang = futures[future]
+                    ]
+                    # in angle order, so that tied scores do not depend on timing
+                    for rot_ang, future in futures:
                         # the selected map's (score, vox_trans)
                         result = future.result()[0]
                         pbar.update(1)
