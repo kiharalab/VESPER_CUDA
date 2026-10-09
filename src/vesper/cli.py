@@ -50,13 +50,12 @@ def validate_ref_args(
     if len(ref_paths) == 0:
         raise ValueError("Empty -a")
     ref_labels = [s for s in labels.split(",") if s] if labels else None
-    if len(ref_paths) >= 2:
-        if not labels:
-            raise ValueError("-labels required when -a has multiple paths")
-        if len(ref_labels) != len(ref_paths):
-            raise ValueError(
-                f"-labels has {len(ref_labels)} entries but -a has {len(ref_paths)} refs"
-            )
+    if len(ref_paths) >= 2 and not labels:
+        raise ValueError("-labels required when -a has multiple paths")
+    if labels and len(ref_labels) != len(ref_paths):
+        raise ValueError(
+            f"-labels has {len(ref_labels)} entries but -a has {len(ref_paths)} refs"
+        )
     if labels:
         bad = [s for s in ref_labels if "/" in s or ".." in s]
         if bad:

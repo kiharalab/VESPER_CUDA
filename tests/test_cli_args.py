@@ -60,6 +60,11 @@ def test_labels_are_unique():
         validate_ref_args("a.mrc,b.mrc", "x,x")
 
 
+def test_one_map_takes_one_label():
+    with _raises("-labels has 2 entries but -a has 1 refs"):
+        validate_ref_args("a.mrc", "x,y")
+
+
 def test_label_of_one_map_is_checked_too():
     with _raises("-labels must not contain '/' or '..': ['x/y']"):
         validate_ref_args("a.mrc", "x/y")
