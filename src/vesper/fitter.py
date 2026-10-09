@@ -245,10 +245,14 @@ class MapFitter:
         else:
             import pyfftw.config
 
-            pyfftw.config.PLANNER_EFFORT = "FFTW_MEASURE"
-            pyfftw.config.NUM_THREADS = max(
-                os.cpu_count() - 2, 2
-            )  # Maybe the CPU is sweating too much?
+            # FFTW_MEASURE picks algorithms by timing them, so scores change run to run
+            pyfftw.config.PLANNER_EFFORT = "FFTW_ESTIMATE"
+            allowed = (
+                len(os.sched_getaffinity(0))
+                if hasattr(os, "sched_getaffinity")
+                else os.cpu_count()
+            )
+            pyfftw.config.NUM_THREADS = max(min(self.threads, allowed), 1)
 
     @property
     def ref_map(self):
