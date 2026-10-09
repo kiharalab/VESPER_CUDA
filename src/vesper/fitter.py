@@ -690,7 +690,9 @@ class MapFitter:
         top_n_list = self.result_list[:top_n]
 
         for result in tqdm(top_n_list, desc="Refining Top N", position=0):
-            curr_result_list = []
+            # the coarse pose competes with its neighbours: the offsets below are odd (-5, -3, ..., 5), so
+            # without it a pose that no neighbour beats comes back a few degrees off (first maximum wins ties)
+            curr_result_list = [dict(result)]
 
             # compose angle list using the interval
             x_list = range(
@@ -824,7 +826,9 @@ class MapFitter:
         self.refined_list = []
         top_n_list = self.result_list[: self.topn]
         for result in tqdm(top_n_list, desc="Refining Top N", position=0):
-            curr_result_list = []
+            # the coarse pose competes with its neighbours: the offsets below are odd (-5, -3, ..., 5), so
+            # without it a pose that no neighbour beats comes back a few degrees off (first maximum wins ties)
+            curr_result_list = [dict(result)]
 
             # compose angle list using the interval
             x_list = range(
