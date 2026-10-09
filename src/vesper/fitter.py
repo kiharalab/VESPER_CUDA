@@ -61,6 +61,7 @@ class MapFitter:
         score=None,
         batch_size=None,
         ref_labels=None,
+        refine_step=2,
     ):
         print("###Initializing fitter###")
 
@@ -86,6 +87,7 @@ class MapFitter:
         self.save_mrc = save_mrc
         self.save_vec = save_vec
         self.batch_size = batch_size
+        self.refine_step = refine_step
         self.angle_comb = []
 
         self.result_list = None
@@ -750,7 +752,9 @@ class MapFitter:
             print()
 
         if self.ang_interval >= 5:
-            self.refine(2, self.topn, sort_by_ldp_recall=self.ldp_recall_mode)
+            self.refine(
+                self.refine_step, self.topn, sort_by_ldp_recall=self.ldp_recall_mode
+            )
 
         if self.refined_list:
             self.final_list = self.refined_list[: self.topn]
