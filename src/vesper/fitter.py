@@ -9,8 +9,25 @@ from scipy.ndimage import laplace
 from scipy.spatial.transform import Rotation as R
 from tqdm import tqdm
 
-from .data.io import save_rotated_pdb, save_vec_as_pdb
+from .data.io import save_rotated_pdb, save_score_pkl, save_vec_as_pdb
 from .utils.utils import get_score
+
+
+def dm_fit_scores(top_items, score_ave, score_std):
+    """DiffModeler's fit score of each top pose, as its read_score() takes it from the printout.
+
+    LDP recall when any top pose has a nonzero one, else the normalized score (the pose score
+    against the mean and population std of all search results); rounded as printed (6 decimals)
+    and x100.
+    """
+    if any(item.get("ldp_recall", 0.0) > 0 for item in top_items):
+        values = [item["ldp_recall"] for item in top_items]
+    else:
+        values = [
+            (item["score"] - score_ave) / score_std if score_std > 0 else 0.0
+            for item in top_items
+        ]
+    return [float(f"{v:.6f}") * 100 for v in values]
 
 
 class MapFitter:
@@ -672,9 +689,11 @@ class MapFitter:
         for i, item in enumerate(self.final_list):
             self._print_result_item(item, i)
 
-        # save rotated pdb structure for visualization
+        # save rotated pdb structure for visualization, with DiffModeler's fit scores
         if self.input_pdb is not None:
-            self._save_topn_pdb()
+            self._save_topn_pdb(
+                dm_fit_scores(self.final_list, self.score_ave, self.score_std)
+            )
 
         # save vectors as pdb for visualization
         if self.save_vec:
@@ -875,20 +894,33 @@ class MapFitter:
             )
         self.refined_list.sort(key=lambda x: x["mix_score"], reverse=True)
 
-    def _save_topn_pdb(self):
+    def _save_topn_pdb(self, fit_scores=None):
+        """Save the top poses
+
+        With fit_scores (DiffModeler's, one per pose), each pose's score / 100 goes into its
+        occupancy column and score.pkl maps each pose file to its score.
+        """
         os.makedirs(os.path.join(self.outdir, "PDB"), exist_ok=True)
+        pose_scores = {}
         for i, item in enumerate(self.final_list):
             rot_mtx = R.from_euler("xyz", item["angle"], degrees=True).inv().as_matrix()
             angle_str = f"rx{int(item['angle'][0])}_ry{int(item['angle'][1])}_rz{int(item['angle'][2])}"
             trans_str = f"tx{item['real_trans'][0]:.3f}_ty{item['real_trans'][1]:.3f}_tz{item['real_trans'][2]:.3f}"
             filename = f"#{i}_{angle_str}_{trans_str}"
+            save_path = os.path.join(self.outdir, "PDB", filename)
             save_rotated_pdb(
                 self.input_pdb,
                 rot_mtx,
                 item["real_trans"],
-                os.path.join(self.outdir, "PDB", filename),
+                save_path,
                 i,
+                occupancy=None if fit_scores is None else fit_scores[i] / 100,
             )
+            if fit_scores is not None:
+                # save_rotated_pdb adds the extension
+                pose_scores[os.path.abspath(save_path + ".pdb")] = fit_scores[i]
+        if fit_scores is not None:
+            save_score_pkl(pose_scores, os.path.join(self.outdir, "score.pkl"))
 
     def _save_topn_vec_as_pdb(self):
         os.makedirs(os.path.join(self.outdir, "VEC"), exist_ok=True)

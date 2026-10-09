@@ -1,5 +1,6 @@
 import gzip
 import os
+import pickle
 import tempfile
 
 import numpy as np
@@ -9,11 +10,14 @@ from Bio.PDB.PDBIO import PDBIO
 from vesper.utils.utils import get_file_extension
 
 
-def save_rotated_pdb(input_pdb, rot_mtx, real_trans, save_path, model_num):
+def save_rotated_pdb(
+    input_pdb, rot_mtx, real_trans, save_path, model_num, occupancy=None
+):
     """
     Save a rotated and translated PDB file.
 
-    Handles .gz compressed files and CIF files without B-factors.
+    Handles .gz compressed files and CIF files without B-factors. occupancy, if given,
+    replaces every atom's occupancy.
     """
     input_format, is_compressed = get_file_extension(input_pdb)
 
@@ -36,6 +40,9 @@ def save_rotated_pdb(input_pdb, rot_mtx, real_trans, save_path, model_num):
             io = PDBIO()
             structure = parser.get_structure("target_pdb", actual_path)
             structure.transform(rot_mtx, real_trans)
+            if occupancy is not None:
+                for atom in structure.get_atoms():
+                    atom.set_occupancy(occupancy)
             io.set_structure(structure)
             io.save(save_path + ".pdb")
         elif input_format == "cif":
@@ -65,6 +72,9 @@ def save_rotated_pdb(input_pdb, rot_mtx, real_trans, save_path, model_num):
             auth_asym_id = mmcif_dict.get(
                 "_atom_site.auth_asym_id", ["A"] * len(x_list)
             )
+
+            if occupancy is None:
+                occupancy = 1.0
 
             # Apply transformation
             n_atoms = len(x_list)
@@ -98,7 +108,7 @@ def save_rotated_pdb(input_pdb, rot_mtx, real_trans, save_path, model_num):
                     # Format PDB ATOM record
                     line = f"ATOM  {i + 1:5d} {atom_name:<4s}{res_name:3s} {chain:1s}{res_seq:4s}    "
                     line += f"{x:8.3f}{y:8.3f}{z:8.3f}"
-                    line += f"{1.0:6.2f}{0.0:6.2f}"
+                    line += f"{occupancy:6.2f}{0.0:6.2f}"
                     line += f"          {type_symbol_list[i]:>2s}\n"
                     f.write(line)
                 f.write("END\n")
@@ -108,6 +118,19 @@ def save_rotated_pdb(input_pdb, rot_mtx, real_trans, save_path, model_num):
         # Cleanup temp file
         if temp_path and os.path.exists(temp_path):
             os.unlink(temp_path)
+
+
+def save_score_pkl(pose_scores, save_path):
+    """
+    Pickle {pose file: score}, best first.
+
+    The file is written under a temporary name and renamed, so that a score.pkl that exists
+    is complete: DiffModeler takes it as the sign that a fit is done.
+    """
+    pose_scores = dict(sorted(pose_scores.items(), key=lambda kv: kv[1], reverse=True))
+    with open(save_path + ".tmp", "wb") as f:
+        pickle.dump(pose_scores, f)
+    os.replace(save_path + ".tmp", save_path)
 
 
 def save_vec_as_pdb(
