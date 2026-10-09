@@ -73,6 +73,29 @@ def validate_ref_args(
     return ref_paths, ref_labels, ldp_paths
 
 
+def validate_search_args(
+    angle_spacing: float,
+    refine_top: int,
+    angle_limit: float | None,
+    batch_size: int | None,
+    output_dir: str | None,
+    pdbin: str | None,
+) -> None:
+    """Reject values that leave the search with nothing to do or nothing to write"""
+    if angle_spacing <= 0:
+        raise ValueError(f"-A (angle spacing) must be > 0; got {angle_spacing}")
+    if refine_top < 1:
+        raise ValueError(f"-N (models to refine) must be >= 1; got {refine_top}")
+    if batch_size is not None and batch_size < 1:
+        raise ValueError(f"-batch must be >= 1; got {batch_size}")
+    if angle_limit is not None and angle_limit < 0:
+        raise ValueError(f"-al (angle limit) must be >= 0; got {angle_limit}")
+    if output_dir and pdbin and not os.path.exists(pdbin):
+        raise ValueError(
+            f"-pdbin {pdbin} does not exist, so nothing would be written to -o {output_dir}"
+        )
+
+
 def check_ref_paths_exist(ref_paths: list[str]) -> None:
     """Exit with code 1, naming every -a map that is missing"""
     missing = [p for p in ref_paths if not os.path.exists(p)]
@@ -216,6 +239,9 @@ def orig_command(
 
     ref_paths, ref_labels, ldp_paths = validate_ref_args(
         map1, labels, ldp_file, ca_file, direct_fit
+    )
+    validate_search_args(
+        angle_spacing, refine_top, angle_limit, batch_size, output_dir, pdbin
     )
     check_ref_paths_exist(ref_paths)
 
