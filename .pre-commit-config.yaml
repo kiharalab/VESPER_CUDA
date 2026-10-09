@@ -1,6 +1,9 @@
 default_language_version:
   python: python3.12
 
+# tests/data holds program outputs that tests compare byte for byte (pose files end lines in spaces)
+exclude: ^tests/data/
+
 repos:
   # 1. Basic checks: whitespace, end-of-file, docs, large files, private keys
   - repo: https://github.com/pre-commit/pre-commit-hooks
