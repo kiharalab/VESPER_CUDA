@@ -10,6 +10,14 @@ from Bio.PDB.PDBIO import PDBIO
 from vesper.utils.utils import get_file_extension
 
 
+def _atom_name_field(name, element):
+    """Columns 13-16: the name starts in column 14 unless it has four characters or its
+    element has two (as Biopython's PDBIO)."""
+    if len(name) < 4 and len(element) == 1:
+        name = " " + name
+    return f"{name[:4]:<4s}"
+
+
 def save_rotated_pdb(
     input_pdb, rot_mtx, real_trans, save_path, model_num, occupancy=None
 ):
@@ -105,11 +113,13 @@ def save_rotated_pdb(
                     chain = auth_asym_id[i] if i < len(auth_asym_id) else "A"
                     res_seq = auth_seq_id[i] if i < len(auth_seq_id) else str(i + 1)
 
-                    # Format PDB ATOM record
-                    line = f"ATOM  {i + 1:5d} {atom_name:<4s}{res_name:3s} {chain:1s}{res_seq:4s}    "
-                    line += f"{x:8.3f}{y:8.3f}{z:8.3f}"
-                    line += f"{occupancy:6.2f}{0.0:6.2f}"
-                    line += f"          {type_symbol_list[i]:>2s}\n"
+                    # Format PDB ATOM record (PDB columns, as Biopython's PDBIO)
+                    line = (
+                        f"ATOM  {i + 1:5d} {_atom_name_field(atom_name, type_symbol_list[i])}"
+                        f" {res_name:>3.3s} {chain[:1]:1s}{res_seq:>4.4s}    "
+                        f"{x:8.3f}{y:8.3f}{z:8.3f}{occupancy:6.2f}{0.0:6.2f}"
+                        f"          {type_symbol_list[i]:>2s}\n"
+                    )
                     f.write(line)
                 f.write("END\n")
         else:
