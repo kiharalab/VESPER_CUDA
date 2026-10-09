@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 import tempfile
@@ -10,7 +11,7 @@ import typer
 from .data.map import EMmap, unify_dims
 from .fitter import MapFitter
 from .utils.pdb2vol import pdb2vol
-from .utils.utils import get_file_extension
+from .utils.utils import get_file_extension, get_score
 
 app = typer.Typer(help="VESPER - CUDA accelerated version")
 
@@ -100,6 +101,54 @@ def check_ref_grids(ref_maps: list[EMmap], voxel_spacing: float) -> None:
             )
 
 
+def evaluate_current_position(
+    ref_maps: list[EMmap],
+    ref_labels: list[str] | None,
+    ref_paths: list[str],
+    tgt_map: EMmap,
+    tgt_path: str,
+    mode: str,
+    output_dir: str | None,
+) -> None:
+    """Score the target where it sits (no search) and print the scores
+
+    With -o, each map's scores, the two input paths and the mode go to eval.json (in
+    <-o>/<label> when there are several maps).
+    """
+    print("### Evaluation Mode ###")
+    for i, ref_map in enumerate(ref_maps):
+        _, overlap, cc, pcc, n, total, dot = get_score(
+            ref_map, tgt_map.new_data, tgt_map.vec, np.array((0, 0, 0))
+        )
+        if len(ref_maps) > 1:
+            print(f"Reference Map {ref_labels[i]}:")
+        print(
+            "Overlap: ", overlap, "CC: ", cc, "PCC: ", pcc, "N: ", n, "Total: ", total,
+            "Dot: ", dot,
+        )  # fmt: skip
+        if output_dir:
+            folder = output_dir
+            if len(ref_maps) > 1:
+                folder = os.path.join(output_dir, ref_labels[i])
+            os.makedirs(folder, exist_ok=True)
+            scores = {
+                "overlap": overlap,
+                "cc": cc,
+                "pcc": pcc,
+                "n": n,
+                "total": total,
+                "dot": dot,
+            }
+            record = {
+                **{k: float(v) for k, v in scores.items()},
+                "ref": os.path.abspath(ref_paths[i]),
+                "target": os.path.abspath(tgt_path),
+                "mode": mode,
+            }
+            with open(os.path.join(folder, "eval.json"), "w") as f:
+                json.dump(record, f, indent=2)
+
+
 def setup_gpu(gpu_id: int | None) -> tuple[bool, object | None]:
     """Setup GPU device"""
     device = None
@@ -163,7 +212,11 @@ def orig_command(
         "L: Laplacian Filtering Mode",
     ),
     eval_mode: bool = typer.Option(
-        False, "-E", help="Evaluation mode of the current position def=false"
+        False,
+        "-E",
+        help="Evaluation mode: score -b at its current position without searching, "
+        "print Overlap/CC/PCC/N/Total/Dot and exit; with -o also write eval.json "
+        "def=false",
     ),
     output_dir: str | None = typer.Option(None, "-o", help="Output folder name"),
     gpu_id: int | None = typer.Option(
@@ -333,6 +386,12 @@ def orig_command(
 
     end_resample = time.time()
     print(f"Resample time: {end_resample - start_time:.2f} s")
+
+    if eval_mode:
+        evaluate_current_position(
+            ref_maps, ref_labels, ref_paths, tgt_map, map2, mode_val, output_dir
+        )
+        raise typer.Exit(code=0)
 
     fitter = MapFitter(
         ref_maps,
