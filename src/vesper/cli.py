@@ -461,6 +461,8 @@ def orig_command(
             name = f"ref_{ref_labels[i]}" if len(ref_maps) > 1 else "ref_map"
             ref_map.save_vectors(os.path.join(vector_dir, name))
         tgt_map.save_vectors(os.path.join(vector_dir, "tgt_map"))
+        if not eval_mode:
+            raise typer.Exit(code=0)
 
     if eval_mode:
         evaluate_current_position(
