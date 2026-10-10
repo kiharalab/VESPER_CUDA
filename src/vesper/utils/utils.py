@@ -120,7 +120,7 @@ def get_score(ref_map, tgt_map_data, tgt_map_vec, trans):
     search_pos = target_pos + t
 
     total += np.count_nonzero(
-        ref_map_data[target_pos[:, 0], target_pos[:, 1], target_pos[:, 2]]
+        ref_map_data[target_pos[:, 0], target_pos[:, 1], target_pos[:, 2]] > 0
     )
 
     combined_arr = np.hstack((target_pos, search_pos))
@@ -150,7 +150,7 @@ def get_score(ref_map, tgt_map_data, tgt_map_vec, trans):
     pcc = np.sum(np.multiply(pd1, pd2))  # Pearson cross correlation
 
     target_zero_mask = (
-        ref_map_data[target_pos[:, 0], target_pos[:, 1], target_pos[:, 2]] == 0
+        ref_map_data[target_pos[:, 0], target_pos[:, 1], target_pos[:, 2]] <= 0
     )
     target_non_zero_mask = (
         ref_map_data[target_pos[:, 0], target_pos[:, 1], target_pos[:, 2]] > 0
