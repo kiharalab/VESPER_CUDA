@@ -8,8 +8,32 @@ import os
 from math import sqrt
 
 import numpy as np
-from pymol import cmd
-from pymol.cgo import CONE, CYLINDER
+
+try:
+    from pymol import cmd
+    from pymol.cgo import CONE, CYLINDER
+except ImportError:  # the arrow geometry is testable without PyMOL
+    cmd = None
+    CYLINDER, CONE = 9.0, 27.0
+
+
+def arrow_parts(coord, vec, cut=0.0, head_length=0.7, notail=False):
+    """Return (tail, head) for one vector, or None if it has zero length.
+
+    tail is (start, end) of the cylinder or None; head is (base, tip) of the cone.
+    The tip is coord + (1 - cut) * vec; the head is clamped to the vector length.
+    """
+    start = np.asarray(coord, dtype=float)
+    delta = (1.0 - cut) * np.asarray(vec, dtype=float)
+    length = sqrt(float(delta @ delta))
+    if length == 0:
+        return None
+    t = 1.0 - min(head_length, length) / length
+    tip = start + delta
+    base = start + t * delta
+    if notail or t == 0:
+        return None, (base, tip)
+    return (start, start + (t + 0.01) * delta), (base, tip)
 
 
 def showvectors(
@@ -34,12 +58,13 @@ def showvectors(
     coords = np.load(coords_path)
     vecs = np.load(vecs_path)
 
+    # PyMOL passes every argument as a string
     arrow_head_radius = float(head)
     arrow_tail_radius = float(tail)
-    arrow_head_length = float(head_length)
+    head_length = float(head_length)
     cut = float(cut)
-    objectname = outname
-    objectname = objectname.strip('"[]()')
+    notail = int(notail)
+    objectname = outname.strip('"[]()')
 
     headrgb = headrgb.strip('" []()')
     tailrgb = tailrgb.strip('" []()')
@@ -47,70 +72,20 @@ def showvectors(
     tr, tg, tb = list(map(float, tailrgb.split(",")))
 
     arrow = []
-
     for coord, vec in zip(coords, vecs):
-        vectorx, vectory, vectorz = vec
-        t = 1.0 - cut
-        x1, y1, z1 = coord
-        x2 = x1 + t * vectorx
-        y2 = y1 + t * vectory
-        z2 = z1 + t * vectorz
-        vectorx = x2 - x1
-        vectory = y2 - y1
-        vectorz = z2 - z1
-        length = sqrt(vectorx**2 + vectory**2 + vectorz**2)
-        if length == 0:
+        parts = arrow_parts(coord, vec, cut, head_length, notail)
+        if parts is None:
             continue
-        d = arrow_head_length  # Distance from arrow tip to arrow base
-        t = 1.0 - (d / length)
-        if notail:
-            t = 0
-        tail = [
-            # Tail of cylinder
-            CYLINDER,
-            x1,
-            y1,
-            z1,
-            x1 + (t + 0.01) * vectorx,
-            y1 + (t + 0.01) * vectory,
-            z1 + (t + 0.01) * vectorz,
-            arrow_tail_radius,
-            tr,
-            tg,
-            tb,
-            tr,
-            tg,
-            tb,  # Radius and RGB for each cylinder tail
-        ]
-        if notail == 0:
-            arrow.extend(tail)
-
-        x = x1 + t * vectorx
-        y = y1 + t * vectory
-        z = z1 + t * vectorz
-        head = [
-            CONE,
-            x,
-            y,
-            z,
-            x2,
-            y2,
-            z2,
-            arrow_head_radius,
-            0.0,
-            hr,
-            hg,
-            hb,
-            hr,
-            hg,
-            hb,
-            1.0,
-            1.0,
-        ]
-        arrow.extend(head)
+        tail_pts, (base, tip) = parts
+        if tail_pts is not None:
+            arrow.extend([CYLINDER, *tail_pts[0], *tail_pts[1]])
+            arrow.extend([arrow_tail_radius, tr, tg, tb, tr, tg, tb])
+        arrow.extend([CONE, *base, *tip, arrow_head_radius, 0.0])
+        arrow.extend([hr, hg, hb, hr, hg, hb, 1.0, 1.0])
 
     cmd.delete(objectname)
     cmd.load_cgo(arrow, objectname)
 
 
-cmd.extend("showvectors", showvectors)
+if cmd is not None:
+    cmd.extend("showvectors", showvectors)

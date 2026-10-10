@@ -10,6 +10,9 @@ import synthetic
 from vesper.data.map import EMmap, unify_dims
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(HERE, "..", "scripts"))
+import pymol_vec  # noqa: E402
+
 ARGS = ["-t", "0.05", "-T", "0.05", "-s", "3", "-g", "8"]
 
 
@@ -82,11 +85,48 @@ def test_saved_vectors_point_to_an_off_centre_blob(tmp_path):
     assert np.any(np.all(np.isclose(coords, top), axis=1))
     assert np.all(np.abs(top - blob) <= emmap.new_width)
 
-    # every voxel more than a voxel from the blob has a vector toward its centre
+    # every voxel more than 2 voxels from the blob has a vector toward its centre
     to_blob = blob - coords
     far = np.linalg.norm(to_blob, axis=1) > 2 * emmap.new_width
     assert far.sum() > 10
-    cosine = np.sum(vecs[far] * to_blob[far], axis=1) / np.linalg.norm(
-        to_blob[far], axis=1
+    cosine = np.sum(vecs[far] * to_blob[far], axis=1) / (
+        np.linalg.norm(vecs[far], axis=1) * np.linalg.norm(to_blob[far], axis=1)
     )
     assert cosine.min() > 0.9
+
+
+def test_cli_with_two_refs_names_files_by_label(tmp_path):
+    synthetic.write_inputs(str(tmp_path))
+    proc = subprocess.run(
+        [sys.executable, os.path.join(HERE, "run_cli.py"), "orig", "-a", "a.mrc,c.mrc"]
+        + ["-labels", "x,y", "-b", "target.mrc", *ARGS, "-v", "vec"],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr
+    names = [f"ref_{m}_{k}.npy" for m in "xy" for k in ("coords", "vecs")]
+    names += [f"tgt_map_{k}.npy" for k in ("coords", "vecs")]
+    assert sorted(os.listdir(tmp_path / "vec")) == sorted(names)
+
+
+def test_arrow_tip_is_at_x2_and_zero_length_is_skipped():
+    tail, (base, tip) = pymol_vec.arrow_parts([1, 2, 3], [4, 0, 0], cut=0.25)
+    assert np.allclose(tip, [4, 2, 3])
+    assert np.allclose(np.linalg.norm(tip - base), 0.7)
+    assert np.allclose(tail[0], [1, 2, 3])
+    assert pymol_vec.arrow_parts([1, 2, 3], [0, 0, 0]) is None
+
+
+def test_arrow_head_is_clamped_to_a_short_vector():
+    tail, (base, tip) = pymol_vec.arrow_parts([0, 0, 0], [0.3, 0, 0])
+    assert tail is None
+    assert np.allclose(base, [0, 0, 0])
+    assert np.allclose(tip, [0.3, 0, 0])
+
+
+def test_notail_zero_string_keeps_the_tail():
+    # PyMOL hands over "0"; showvectors converts it with int() before use
+    assert pymol_vec.arrow_parts([0, 0, 0], [5, 0, 0], notail=int("0"))[0] is not None
+    assert pymol_vec.arrow_parts([0, 0, 0], [5, 0, 0], notail=int("1"))[0] is None
