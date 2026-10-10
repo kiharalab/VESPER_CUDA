@@ -7,6 +7,7 @@ import time
 from types import SimpleNamespace
 
 import click
+import numpy as np
 import pytest
 from test_multi_map import _grid
 from typer.testing import CliRunner
@@ -22,27 +23,55 @@ def _fitter(inputs, **kwargs):
     return MapFitter(*args, **kwargs)
 
 
-def test_cpu_results_come_back_in_angle_order(inputs, monkeypatch):
-    # the harness hands results back in submission order; undo that
-    monkeypatch.setattr(
-        concurrent.futures, "as_completed", concurrent.futures._base.as_completed
-    )
-    fitter = _fitter(inputs)
-    angles = [tuple(a) for a in fitter.angle_comb]
-    delay = {a: 0.005 * (len(angles) - i) for i, a in enumerate(angles)}
+def _backwards(futures):
+    """as_completed finishing in reverse submission order (the old collection loop)."""
+    return iter(reversed(list(futures)))
 
-    def slow_first(rot_ang, return_data, ref_ids=None):
+
+def _slow_early_first(fitter, angles):
+    delay = {tuple(a): 0.005 * (len(angles) - i) for i, a in enumerate(angles)}
+
+    def search(rot_ang, return_data, ref_ids=None):
         time.sleep(delay[tuple(rot_ang)])  # early angles finish last
         return [(1.0, (0, 0, 0))]
 
+    return search
+
+
+def test_cpu_results_come_back_in_angle_order(inputs, monkeypatch):
+    monkeypatch.setattr(concurrent.futures, "as_completed", _backwards)
+    fitter = _fitter(inputs)
+    angles = [tuple(a) for a in fitter.angle_comb]
     seen = []
-    monkeypatch.setattr(fitter, "_rot_and_search_fft", slow_first)
+    monkeypatch.setattr(
+        fitter, "_rot_and_search_fft", _slow_early_first(fitter, angles)
+    )
     monkeypatch.setattr(
         fitter, "_add_search_results", lambda lists, rot_ang, res: seen.append(rot_ang)
     )
     monkeypatch.setattr(fitter, "_finish_selected_map", lambda: None)
     fitter.fit()
     assert [tuple(a) for a in seen] == angles
+
+
+def test_cpu_refinement_takes_ties_in_angle_order(inputs, monkeypatch):
+    monkeypatch.setattr(concurrent.futures, "as_completed", _backwards)
+    fitter = _fitter(inputs)
+    coarse = {"angle": (30.0, 30.0, 30.0), "score": 0.0, "vox_trans": (0, 0, 0)}
+    fitter.result_list = [coarse]
+    fitter.ref_map.new_data = np.zeros(1)  # set by fit(), which is skipped here
+    # every neighbour scores 1.0, so the first one in the list wins the tie
+    neighbours = [
+        np.array([x, y, z], dtype=np.float32)
+        for x in range(25, 36, 2)
+        for y in range(25, 36, 2)
+        for z in range(25, 36, 2)
+    ]
+    monkeypatch.setattr(
+        fitter, "_rot_and_search_fft", _slow_early_first(fitter, neighbours)
+    )
+    fitter.refine(2, 1)
+    assert tuple(fitter.refined_list[0]["angle"]) == tuple(neighbours[0])
 
 
 @pytest.mark.parametrize("std", [0.0, 2.0])
