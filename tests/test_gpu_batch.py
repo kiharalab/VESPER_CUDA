@@ -253,6 +253,7 @@ def test_refinement_probes_its_own_batch_size(monkeypatch, capsys):
         _add_search_results=lambda *args: None,
         _rot_and_search_fft_batch=rot_and_search,
         _convert_trans=lambda angle, trans: trans,
+        _refine_angles=fitter_module.MapFitter._refine_angles,
     )
     stub._fit_batch_size = types.MethodType(
         fitter_module.MapFitter._fit_batch_size, stub
