@@ -178,8 +178,9 @@ def get_score(ref_map, tgt_map_data, tgt_map_vec, trans):
     Nm = np.count_nonzero(np.multiply(target_non_zero_mask, search_non_zero_mask))
 
     overlap = float(Nm) / float(total) if total else 0.0
-    cc = cc / (std1 * std2)  # cross correlation
-    pcc = pcc / (pstd1 * pstd2)  # Pearson cross correlation
+    # 0 when the target has no density on the grid (-E with the target outside the box)
+    cc = cc / (std1 * std2) if std2 else 0.0  # cross correlation
+    pcc = pcc / (pstd1 * pstd2) if pstd2 else 0.0  # Pearson cross correlation
     dot = sco_sum
 
     return sco_arr, overlap, cc, pcc, Nm, total, dot

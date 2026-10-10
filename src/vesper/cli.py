@@ -111,6 +111,8 @@ def evaluate_current_position(
 ) -> None:
     """Score the target where it sits (no search) and print the scores
 
+    The target must already be resampled on the grid of the reference maps.
+
     With -o, each map's scores and the two input paths go to eval.json (in
     <-o>/<label> when there are several maps).
     """
@@ -373,6 +375,9 @@ def orig_command(
     unify_dims([*ref_maps, tgt_map], voxel_size=voxel_spacing)
     if len(ref_maps) > 1:
         check_ref_grids(ref_maps, voxel_spacing)
+    if eval_mode:
+        # -E scores the target where it sits: resample it on the reference grid
+        tgt_map.new_cent, tgt_map.new_orig = ref_maps[0].new_cent, ref_maps[0].new_orig
 
     # resample the maps using mean-shift with Gaussian kernel and calculate the vector representation
     for i, ref_map in enumerate(ref_maps):
