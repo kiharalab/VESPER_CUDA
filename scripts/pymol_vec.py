@@ -59,6 +59,8 @@ def showvectors(
         vectory = y2 - y1
         vectorz = z2 - z1
         length = sqrt(vectorx**2 + vectory**2 + vectorz**2)
+        if length == 0:
+            continue
         d = arrow_head_length  # Distance from arrow tip to arrow base
         t = 1.0 - (d / length)
         if notail:
@@ -86,17 +88,14 @@ def showvectors(
         x = x1 + t * vectorx
         y = y1 + t * vectory
         z = z1 + t * vectorz
-        dx = x2 - x
-        dy = y2 - y
-        dz = z2 - z
         head = [
             CONE,
             x,
             y,
             z,
-            x + d * dx,
-            y + d * dy,
-            z + d * dz,
+            x2,
+            y2,
+            z2,
             arrow_head_radius,
             0.0,
             hr,
