@@ -87,6 +87,8 @@ class MapFitter:
         self.save_mrc = save_mrc
         self.save_vec = save_vec
         self.batch_size = batch_size
+        if refine_step not in (1, 2):
+            raise ValueError(f"refine_step must be 1 or 2, not {refine_step}")
         self.refine_step = refine_step
         self.angle_comb = []
 
@@ -585,6 +587,7 @@ class MapFitter:
         # refine
 
         if self.ang_interval >= 5 and self.refine:
+            # fixed at 2 degrees: ss has no -R and is to be removed, so refine_step does not reach it
             self.refine_ss(2)
 
         if self.refined_list:
@@ -788,8 +791,9 @@ class MapFitter:
         top_n_list = self.result_list[:top_n]
 
         for result in tqdm(top_n_list, desc="Refining Top N", position=0):
-            # the coarse pose competes with its neighbours: the offsets below are odd (-5, -3, ..., 5), so
-            # without it a pose that no neighbour beats comes back a few degrees off (first maximum wins ties)
+            # the coarse pose competes with its neighbours: at step 2 the offsets are odd (-5, -3, ..., 5), so
+            # without it a pose that no neighbour beats comes back a few degrees off (first maximum wins ties).
+            # At step 1 the grid holds it too (offset 0), so that grid point is skipped below.
             curr_result_list = [dict(result)]
 
             # compose angle list using the interval
@@ -802,8 +806,9 @@ class MapFitter:
             z_list = range(
                 int(result["angle"][2]) - 5, int(result["angle"][2]) + 6, ang_interval
             )
+            coarse = tuple(float(a) for a in result["angle"])
             curr_refine_ang_list = np.array(
-                list(product(x_list, y_list, z_list))
+                [p for p in product(x_list, y_list, z_list) if p != coarse]
             ).astype(np.float32)
 
             # make sure the angles are in the range of 0-360
@@ -926,8 +931,9 @@ class MapFitter:
         self.refined_list = []
         top_n_list = self.result_list[: self.topn]
         for result in tqdm(top_n_list, desc="Refining Top N", position=0):
-            # the coarse pose competes with its neighbours: the offsets below are odd (-5, -3, ..., 5), so
-            # without it a pose that no neighbour beats comes back a few degrees off (first maximum wins ties)
+            # the coarse pose competes with its neighbours: at step 2 the offsets are odd (-5, -3, ..., 5), so
+            # without it a pose that no neighbour beats comes back a few degrees off (first maximum wins ties).
+            # At step 1 the grid holds it too (offset 0), so that grid point is skipped below.
             curr_result_list = [dict(result)]
 
             # compose angle list using the interval
@@ -940,8 +946,9 @@ class MapFitter:
             z_list = range(
                 int(result["angle"][2]) - 5, int(result["angle"][2]) + 6, ang_interval
             )
+            coarse = tuple(float(a) for a in result["angle"])
             curr_refine_ang_list = np.array(
-                list(product(x_list, y_list, z_list))
+                [p for p in product(x_list, y_list, z_list) if p != coarse]
             ).astype(np.float32)
 
             # make sure the angles are in the range of 0-360

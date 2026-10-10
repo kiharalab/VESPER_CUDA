@@ -41,10 +41,11 @@ def refine_searches(tmp_path, monkeypatch, *extra):
 
 
 @pytest.mark.parametrize(
-    ("extra", "per_top"), [([], 216), (["-R", "2"], 216), (["-R", "1"], 1331)]
+    ("extra", "per_top"), [([], 216), (["-R", "2"], 216), (["-R", "1"], 1330)]
 )
 def test_candidates_per_top_pose(tmp_path, monkeypatch, extra, per_top):
     counts, poses, _ = refine_searches(tmp_path, monkeypatch, *extra)
+    # at -R 1 the coarse pose is scored once (stored), not again as the grid's offset 0
     assert counts == [2 * per_top]
     # +-5 degrees around each coarse pose, in steps of -R (mod 360)
     step = 1 if "1" in extra else 2
@@ -53,9 +54,32 @@ def test_candidates_per_top_pose(tmp_path, monkeypatch, extra, per_top):
 
 
 @pytest.mark.parametrize("bad", ["0", "3"])
-def test_step_must_be_1_or_2(tmp_path, bad):
-    result = CliRunner().invoke(app, ["orig", "-a", "a.mrc", "-b", "b.mrc", "-R", bad])
-    assert result.exit_code != 0
+def test_step_must_be_1_or_2(tmp_path, monkeypatch, bad):
+    synthetic.write_inputs(str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+    args = ["orig", "-a", "a.mrc", "-b", "target.mrc", "-R", bad]
+    result = CliRunner().invoke(app, args)
+    assert result.exit_code == 2
+    assert "-R" in result.output
+
+
+@pytest.mark.parametrize("bad", [0, 3])
+def test_fitter_rejects_other_steps(bad):
+    with pytest.raises(ValueError, match="refine_step"):
+        MapFitter(
+            "a.mrc",
+            "target.mrc",
+            30,
+            None,
+            False,
+            None,
+            None,
+            None,
+            1,
+            False,
+            "cpu",
+            refine_step=bad,
+        )
 
 
 def test_explicit_default_matches_golden(tmp_path):
