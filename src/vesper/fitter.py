@@ -851,35 +851,32 @@ class MapFitter:
         if self.save_mrc:
             self._save_topn_mrc()
 
+    @staticmethod
+    def _refine_angles(angle, step):
+        """Angles within +-5 degrees of a coarse pose, in steps of `step`, without the pose itself
+
+        At step 2 the offsets are odd (-5, -3, ..., 5); at step 1 the grid holds offset 0, which is
+        the coarse pose, already in the list being refined.
+        """
+        axes = [range(int(a) - 5, int(a) + 6, step) for a in angle]
+        coarse = tuple(float(a) for a in angle)
+        angles = np.array(
+            [p for p in product(*axes) if p != coarse], dtype=np.float32
+        ).reshape(-1, 3)
+        # make sure the angles are in the range of 0-360
+        angles[angles < 0] += 360
+        angles[angles > 360] -= 360
+        return angles
+
     def refine(self, ang_interval, top_n, sort_by_ldp_recall=False):
         print("###Start Refining###")
         self.refined_list = []
         top_n_list = self.result_list[:top_n]
 
         for result in tqdm(top_n_list, desc="Refining Top N", position=0):
-            # the coarse pose competes with its neighbours: at step 2 the offsets are odd (-5, -3, ..., 5), so
-            # without it a pose that no neighbour beats comes back a few degrees off (first maximum wins ties).
-            # At step 1 the grid holds it too (offset 0), so that grid point is skipped below.
+            # the coarse pose competes with its neighbours (first maximum wins ties)
             curr_result_list = [dict(result)]
-
-            # compose angle list using the interval
-            x_list = range(
-                int(result["angle"][0]) - 5, int(result["angle"][0]) + 6, ang_interval
-            )
-            y_list = range(
-                int(result["angle"][1]) - 5, int(result["angle"][1]) + 6, ang_interval
-            )
-            z_list = range(
-                int(result["angle"][2]) - 5, int(result["angle"][2]) + 6, ang_interval
-            )
-            coarse = tuple(float(a) for a in result["angle"])
-            curr_refine_ang_list = np.array(
-                [p for p in product(x_list, y_list, z_list) if p != coarse]
-            ).astype(np.float32)
-
-            # make sure the angles are in the range of 0-360
-            curr_refine_ang_list[curr_refine_ang_list < 0] += 360
-            curr_refine_ang_list[curr_refine_ang_list > 360] -= 360
+            curr_refine_ang_list = self._refine_angles(result["angle"], ang_interval)
 
             # Use batched processing on GPU
             if self.gpu:
@@ -1000,29 +997,9 @@ class MapFitter:
         self.refined_list = []
         top_n_list = self.result_list[: self.topn]
         for result in tqdm(top_n_list, desc="Refining Top N", position=0):
-            # the coarse pose competes with its neighbours: at step 2 the offsets are odd (-5, -3, ..., 5), so
-            # without it a pose that no neighbour beats comes back a few degrees off (first maximum wins ties).
-            # At step 1 the grid holds it too (offset 0), so that grid point is skipped below.
+            # the coarse pose competes with its neighbours (first maximum wins ties)
             curr_result_list = [dict(result)]
-
-            # compose angle list using the interval
-            x_list = range(
-                int(result["angle"][0]) - 5, int(result["angle"][0]) + 6, ang_interval
-            )
-            y_list = range(
-                int(result["angle"][1]) - 5, int(result["angle"][1]) + 6, ang_interval
-            )
-            z_list = range(
-                int(result["angle"][2]) - 5, int(result["angle"][2]) + 6, ang_interval
-            )
-            coarse = tuple(float(a) for a in result["angle"])
-            curr_refine_ang_list = np.array(
-                [p for p in product(x_list, y_list, z_list) if p != coarse]
-            ).astype(np.float32)
-
-            # make sure the angles are in the range of 0-360
-            curr_refine_ang_list[curr_refine_ang_list < 0] += 360
-            curr_refine_ang_list[curr_refine_ang_list > 360] -= 360
+            curr_refine_ang_list = self._refine_angles(result["angle"], ang_interval)
             with tqdm(total=len(curr_refine_ang_list), position=1, leave=False) as pbar:
                 for rot_ang in curr_refine_ang_list:
                     result = self._rot_and_search_fft_ss(
