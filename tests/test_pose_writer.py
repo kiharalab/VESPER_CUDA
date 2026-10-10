@@ -112,7 +112,83 @@ def test_cif_hetatm_record_kept(tmp_path):
     assert line[17:20] == "HOH"
 
 
-@pytest.mark.parametrize("bad", [dict(auth_asym_id="AA"), dict(auth_seq_id="10000")])
+@pytest.mark.parametrize(
+    "bad",
+    [
+        dict(auth_asym_id="AA"),
+        dict(auth_seq_id="10000"),
+        dict(label_comp_id="ALAX"),
+        dict(label_atom_id="CAXXX"),
+    ],
+)
 def test_cif_pose_refuses_fields_that_do_not_fit(tmp_path, bad):
     with pytest.raises(ValueError, match="exceeds PDB format limit"):
         _cif_pose(tmp_path, bad)
+    assert not (tmp_path / "p.pdb").exists()
+
+
+def test_cif_pose_writes_nothing_when_a_later_atom_does_not_fit(tmp_path):
+    model = tmp_path / "m.cif"
+    model.write_text(
+        "data_m\nloop_\n"
+        + "".join(
+            f"_atom_site.{k}\n"
+            for k in "group_PDB id type_symbol label_atom_id label_comp_id label_asym_id "
+            "label_seq_id Cartn_x Cartn_y Cartn_z auth_seq_id auth_asym_id".split()
+        )
+        + "ATOM 1 C CA ALA A 1 1.0 2.0 3.0 1 A\n"
+        + "ATOM 2 C CA ALA A 2 1.0 2.0 3.0 10000 A\n"
+    )
+    with pytest.raises(ValueError, match="exceeds PDB format limit"):
+        save_rotated_pdb(str(model), np.eye(3), np.zeros(3), str(tmp_path / "p"), 0)
+    assert not (tmp_path / "p.pdb").exists()
+
+
+def test_cif_resseq_9999_accepted(tmp_path):
+    line = _cif_pose(tmp_path, dict(auth_seq_id="9999"))
+    assert line[22:26] == "9999"
+
+
+def test_cif_serial_limit(tmp_path):
+    def pose(n):
+        model = tmp_path / "m.cif"
+        rows = "".join(
+            f"ATOM {i} C CA ALA A 1 1.0 2.0 3.0 1 A\n" for i in range(1, n + 1)
+        )
+        model.write_text(
+            "data_m\nloop_\n"
+            + "".join(
+                f"_atom_site.{k}\n"
+                for k in "group_PDB id type_symbol label_atom_id label_comp_id "
+                "label_asym_id label_seq_id Cartn_x Cartn_y Cartn_z auth_seq_id "
+                "auth_asym_id".split()
+            )
+            + rows
+        )
+        save_rotated_pdb(str(model), np.eye(3), np.zeros(3), str(tmp_path / "p"), 0)
+
+    pose(99999)
+    (tmp_path / "p.pdb").unlink()
+    with pytest.raises(ValueError, match="serial number exceeds"):
+        pose(100000)
+    assert not (tmp_path / "p.pdb").exists()
+
+
+def test_cif_altloc_and_insertion_code_written(tmp_path):
+    line = _cif_pose(
+        tmp_path, dict(label_alt_id="B", pdbx_PDB_ins_code="A", auth_seq_id="52")
+    )
+    assert line[16] == "B"
+    assert line[22:27] == "  52A"
+    atom = next(
+        PDBParser(QUIET=True).get_structure("p", str(tmp_path / "p.pdb")).get_atoms()
+    )
+    assert atom.get_altloc() == "B"
+    assert atom.get_parent().get_id() == (" ", 52, "A")
+
+
+@pytest.mark.parametrize("blank", ["?", "."])
+def test_cif_blank_altloc_and_insertion_code(tmp_path, blank):
+    line = _cif_pose(tmp_path, dict(label_alt_id=blank, pdbx_PDB_ins_code=blank))
+    assert line[16] == " "
+    assert line[26] == " "

@@ -96,43 +96,56 @@ def save_rotated_pdb(
             # Same as Biopython's structure.transform(rot_mtx, real_trans) above
             transformed = coords @ rot_mtx + real_trans
 
-            # Write PDB format
-            with open(save_path + ".pdb", "w") as f:
-                f.write("REMARK   VESPER transformed structure\n")
-                f.write("REMARK   Rotation matrix:\n")
-                for i in range(3):
-                    f.write(
-                        f"REMARK   [{rot_mtx[i, 0]:10.6f}, {rot_mtx[i, 1]:10.6f}, {rot_mtx[i, 2]:10.6f}]\n"
-                    )
-                f.write(
-                    f"REMARK   Translation: [{real_trans[0]:10.4f}, {real_trans[1]:10.4f}, {real_trans[2]:10.4f}]\n"
+            alt_loc = mmcif_dict.get("_atom_site.label_alt_id", ["."] * len(x_list))
+            ins_code = mmcif_dict.get(
+                "_atom_site.pdbx_PDB_ins_code", ["?"] * len(x_list)
+            )
+
+            # Build every line first: a field that does not fit writes nothing
+            lines = [
+                "REMARK   VESPER transformed structure\n",
+                "REMARK   Rotation matrix:\n",
+            ]
+            for i in range(3):
+                lines.append(
+                    f"REMARK   [{rot_mtx[i, 0]:10.6f}, {rot_mtx[i, 1]:10.6f}, {rot_mtx[i, 2]:10.6f}]\n"
                 )
+            lines.append(
+                f"REMARK   Translation: [{real_trans[0]:10.4f}, {real_trans[1]:10.4f}, {real_trans[2]:10.4f}]\n"
+            )
 
-                for i in range(n_atoms):
-                    x, y, z = transformed[i]
-                    atom_name = label_atom_id[i] if i < len(label_atom_id) else "CA"
-                    res_name = label_comp_id[i] if i < len(label_comp_id) else "ALA"
-                    chain = auth_asym_id[i] if i < len(auth_asym_id) else "A"
-                    res_seq = auth_seq_id[i] if i < len(auth_seq_id) else str(i + 1)
+            if n_atoms > 99999:
+                raise ValueError("Atom serial number exceeds PDB format limit")
+            for i in range(n_atoms):
+                x, y, z = transformed[i]
+                atom_name = label_atom_id[i] if i < len(label_atom_id) else "CA"
+                res_name = label_comp_id[i] if i < len(label_comp_id) else "ALA"
+                chain = auth_asym_id[i] if i < len(auth_asym_id) else "A"
+                res_seq = auth_seq_id[i] if i < len(auth_seq_id) else str(i + 1)
+                alt = "" if alt_loc[i] in "?." else alt_loc[i]
+                icode = "" if ins_code[i] in "?." else ins_code[i]
 
-                    if i + 1 > 99999:
-                        raise ValueError("Atom serial number exceeds PDB format limit")
-                    if len(chain) > 1:
-                        raise ValueError(f"Chain id {chain!r} exceeds PDB format limit")
-                    if len(res_seq) > 4:
-                        raise ValueError(
-                            f"Residue number {res_seq!r} exceeds PDB format limit"
-                        )
+                for what, value, width in [
+                    ("Atom name", atom_name, 4),
+                    ("Residue name", res_name, 3),
+                    ("Chain id", chain, 1),
+                    ("Residue number", res_seq, 4),
+                    ("Alternate location", alt, 1),
+                    ("Insertion code", icode, 1),
+                ]:
+                    if len(value) > width:
+                        raise ValueError(f"{what} {value!r} exceeds PDB format limit")
 
-                    # Format PDB ATOM record (PDB columns, as Biopython's PDBIO)
-                    line = (
-                        f"{group_pdb[i]:<6.6s}{i + 1:5d} {_atom_name_field(atom_name, type_symbol_list[i])}"
-                        f" {res_name:>3.3s} {chain:1s}{res_seq:>4s}    "
-                        f"{x:8.3f}{y:8.3f}{z:8.3f}{occupancy:6.2f}{0.0:6.2f}"
-                        f"          {type_symbol_list[i]:>2s}\n"
-                    )
-                    f.write(line)
-                f.write("END\n")
+                # Format PDB ATOM record (PDB columns, as Biopython's PDBIO)
+                lines.append(
+                    f"{group_pdb[i]:<6.6s}{i + 1:5d} {_atom_name_field(atom_name, type_symbol_list[i])}"
+                    f"{alt:1s}{res_name:>3s} {chain:1s}{res_seq:>4s}{icode:1s}   "
+                    f"{x:8.3f}{y:8.3f}{z:8.3f}{occupancy:6.2f}{0.0:6.2f}"
+                    f"          {type_symbol_list[i]:>2s}\n"
+                )
+            lines.append("END\n")
+            with open(save_path + ".pdb", "w") as f:
+                f.writelines(lines)
         else:
             raise Exception("Input file format not supported. Use .pdb or .cif")
     finally:
