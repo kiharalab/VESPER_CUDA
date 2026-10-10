@@ -48,10 +48,15 @@ def test_one_label_per_map():
 
 @pytest.mark.parametrize(
     ("labels", "bad"),
-    [("x/y,z", "['x/y']"), ("..,z", "['..']"), ("a..b,z", "['a..b']")],
+    [
+        ("x/y,z", "['x/y']"),
+        ("..,z", "['..']"),
+        ("a..b,z", "['a..b']"),
+        (".,z", "['.']"),
+    ],
 )
 def test_labels_stay_inside_the_output_folder(labels, bad):
-    with _raises(f"-labels must not contain '/' or '..': {bad}"):
+    with _raises(f"-labels must not contain '/' or '..', or be '.': {bad}"):
         validate_ref_args("a.mrc,b.mrc", labels)
 
 
@@ -61,7 +66,7 @@ def test_labels_are_unique():
 
 
 def test_label_of_one_map_is_checked_too():
-    with _raises("-labels must not contain '/' or '..': ['x/y']"):
+    with _raises("-labels must not contain '/' or '..', or be '.': ['x/y']"):
         validate_ref_args("a.mrc", "x/y")
 
 

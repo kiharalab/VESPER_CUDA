@@ -58,9 +58,9 @@ def validate_ref_args(
                 f"-labels has {len(ref_labels)} entries but -a has {len(ref_paths)} refs"
             )
     if labels:
-        bad = [s for s in ref_labels if "/" in s or ".." in s]
+        bad = [s for s in ref_labels if "/" in s or ".." in s or s == "."]
         if bad:
-            raise ValueError(f"-labels must not contain '/' or '..': {bad}")
+            raise ValueError(f"-labels must not contain '/' or '..', or be '.': {bad}")
         if len(set(ref_labels)) != len(ref_labels):
             raise ValueError(f"-labels must be unique; got {ref_labels}")
     if direct_fit and (ldp or ca):
