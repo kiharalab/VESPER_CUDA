@@ -21,6 +21,17 @@ def test_reference_spectra_are_complex64(inputs, mode):
     assert {f.dtype for f in fitter.ref_map_fft_lists[0]} == {np.dtype(np.complex64)}
 
 
+@pytest.mark.parametrize("mode", ["V", "C", "P", "O", "L"])
+def test_target_spectra_are_complex64(inputs, mode):
+    fitter = _fitter(inputs, mode)
+    seen = []
+    fft_list = fitter._fft_list
+    fitter._fft_list = lambda pre: seen.append(fft_list(pre)) or seen[-1]
+    fitter._rot_and_search_fft([10.0, 20.0, 30.0], False)
+    assert len(seen[0]) == (3 if mode == "V" else 1)
+    assert {f.dtype for f in seen[0]} == {np.dtype(np.complex64)}
+
+
 @pytest.mark.parametrize("mode", ["V", "C"])
 def test_channels_summed_before_one_inverse_transform(inputs, mode):
     fitter = _fitter(inputs, mode)
@@ -30,9 +41,9 @@ def test_channels_summed_before_one_inverse_transform(inputs, mode):
         (rng.normal(size=f.shape) + 1j * rng.normal(size=f.shape)).astype(np.complex64)
         for f in ref
     ]
+    # the old way: one inverse transform per channel, summed in real space
     channels = fitter._fft_get_prod_list(ref, tgt)
     (summed,) = fitter._fft_get_prod_list(ref, tgt, sum_channels=True)
     assert len(channels) == len(ref)
-    np.testing.assert_allclose(
-        summed, np.sum(channels, axis=0), rtol=1e-4, atol=1e-4 * np.abs(summed).max()
-    )
+    old = np.sum(channels, axis=0)
+    np.testing.assert_allclose(summed, old, rtol=0, atol=1e-6 * np.abs(old).max())

@@ -269,7 +269,7 @@ class MapFitter:
 
         # Postprocessing for other modes
         if self.mode == "O":
-            ref_x_real = np.where(ref_map.new_data > 0, 1.0, 0.0)
+            ref_x_real = np.where(ref_map.new_data > 0, 1.0, 0.0).astype(np.float32)
         elif self.mode == "C":
             ref_x_real = np.where(ref_map.new_data > 0, ref_map.new_data, 0.0)
         elif self.mode == "P":
@@ -1344,7 +1344,7 @@ class MapFitter:
             if not self.gpu:
                 x2 = new_data
                 if self.mode == "O":
-                    x2 = np.where(x2 > 0, 1.0, 0.0)
+                    x2 = np.where(x2 > 0, 1.0, 0.0).astype(np.float32)
                 elif self.mode == "C":
                     x2 = np.where(x2 > 0, x2, 0.0)
                 elif self.mode == "P":
