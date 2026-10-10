@@ -72,3 +72,47 @@ def test_cif_pose_lines_are_pdb_columns(tmp_path):
         [a.coord for a in atoms], R.from_matrix(rot).inv().apply(coords) + t, atol=1e-3
     )
     assert {a.get_occupancy() for a in atoms} == {0.5}
+
+
+def _cif_pose(tmp_path, atom_row):
+    """Write a one-atom cif from atom_row (a dict over the columns) and pose it."""
+    cols = dict(
+        group_PDB="ATOM", id="1", type_symbol="C", label_atom_id="CA",
+        label_comp_id="ALA", label_asym_id="A", label_seq_id="1", Cartn_x="1.0",
+        Cartn_y="2.0", Cartn_z="3.0", auth_seq_id="1", auth_asym_id="A",
+    )  # fmt: skip
+    cols.update(atom_row)
+    model = tmp_path / "m.cif"
+    with open(model, "w") as f:
+        f.write("data_m\nloop_\n")
+        f.writelines(f"_atom_site.{k}\n" for k in cols)
+        f.write(" ".join(cols.values()) + "\n")
+    save_rotated_pdb(str(model), np.eye(3), np.zeros(3), str(tmp_path / "p"), 0)
+    with open(tmp_path / "p.pdb") as f:
+        return next(line for line in f if line.startswith(("ATOM", "HETATM")))
+
+
+@pytest.mark.parametrize(
+    "name, element, field",
+    [
+        ("CA", "C", " CA "),
+        ("1HB", "H", "1HB "),
+        ("CA", "CA", "CA  "),
+        ("HE21", "H", "HE21"),
+    ],
+)
+def test_cif_atom_name_column_as_biopython(tmp_path, name, element, field):
+    line = _cif_pose(tmp_path, dict(label_atom_id=name, type_symbol=element))
+    assert line[12:16] == field
+
+
+def test_cif_hetatm_record_kept(tmp_path):
+    line = _cif_pose(tmp_path, dict(group_PDB="HETATM", label_comp_id="HOH"))
+    assert line.startswith("HETATM    1")
+    assert line[17:20] == "HOH"
+
+
+@pytest.mark.parametrize("bad", [dict(auth_asym_id="AA"), dict(auth_seq_id="10000")])
+def test_cif_pose_refuses_fields_that_do_not_fit(tmp_path, bad):
+    with pytest.raises(ValueError, match="exceeds PDB format limit"):
+        _cif_pose(tmp_path, bad)

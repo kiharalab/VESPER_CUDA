@@ -11,9 +11,9 @@ from vesper.utils.utils import get_file_extension
 
 
 def _atom_name_field(name, element):
-    """Columns 13-16: the name starts in column 14 unless it has four characters or its
-    element has two (as Biopython's PDBIO)."""
-    if len(name) < 4 and len(element) == 1:
+    """Columns 13-16: the name starts in column 14 unless it has four characters, does
+    not start with a letter, or its element has two (as Biopython's PDBIO)."""
+    if len(name) < 4 and name[:1].isalpha() and len(element) == 1:
         name = " " + name
     return f"{name[:4]:<4s}"
 
@@ -81,6 +81,8 @@ def save_rotated_pdb(
                 "_atom_site.auth_asym_id", ["A"] * len(x_list)
             )
 
+            group_pdb = mmcif_dict.get("_atom_site.group_PDB", ["ATOM"] * len(x_list))
+
             if occupancy is None:
                 occupancy = 1.0
 
@@ -113,10 +115,19 @@ def save_rotated_pdb(
                     chain = auth_asym_id[i] if i < len(auth_asym_id) else "A"
                     res_seq = auth_seq_id[i] if i < len(auth_seq_id) else str(i + 1)
 
+                    if i + 1 > 99999:
+                        raise ValueError("Atom serial number exceeds PDB format limit")
+                    if len(chain) > 1:
+                        raise ValueError(f"Chain id {chain!r} exceeds PDB format limit")
+                    if len(res_seq) > 4:
+                        raise ValueError(
+                            f"Residue number {res_seq!r} exceeds PDB format limit"
+                        )
+
                     # Format PDB ATOM record (PDB columns, as Biopython's PDBIO)
                     line = (
-                        f"ATOM  {i + 1:5d} {_atom_name_field(atom_name, type_symbol_list[i])}"
-                        f" {res_name:>3.3s} {chain[:1]:1s}{res_seq:>4.4s}    "
+                        f"{group_pdb[i]:<6.6s}{i + 1:5d} {_atom_name_field(atom_name, type_symbol_list[i])}"
+                        f" {res_name:>3.3s} {chain:1s}{res_seq:>4s}    "
                         f"{x:8.3f}{y:8.3f}{z:8.3f}{occupancy:6.2f}{0.0:6.2f}"
                         f"          {type_symbol_list[i]:>2s}\n"
                     )
