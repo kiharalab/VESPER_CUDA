@@ -100,6 +100,25 @@ def validate_search_args(
         raise click.UsageError(f"-pdbin {pdbin} does not exist")
 
 
+def validate_input_files(
+    target: str,
+    resolution: float | None,
+    ldp_file: str | None,
+    ca_file: str | None,
+    ldp_paths: list[str] | None,
+) -> None:
+    """Reject a missing -b, -ldp or -ca file, or a structure -b without -res"""
+    if not os.path.exists(target):
+        raise click.UsageError(f"-b {target} does not exist")
+    if get_file_extension(target)[0] in ["pdb", "cif"] and resolution is None:
+        raise click.UsageError("-res is required when -b is a structure")
+    if bool(ldp_file) != bool(ca_file):
+        raise click.UsageError("-ldp and -ca must be given together")
+    for path in [*(ldp_paths or []), *([ca_file] if ca_file else [])]:
+        if not os.path.exists(path):
+            raise click.UsageError(f"{path} does not exist (-ldp/-ca)")
+
+
 def check_ref_paths_exist(ref_paths: list[str]) -> None:
     """Exit with code 1, naming every -a map that is missing"""
     missing = [p for p in ref_paths if not os.path.exists(p)]
@@ -246,6 +265,7 @@ def orig_command(
     )
     validate_search_args(angle_spacing, refine_top, angle_limit, batch_size, pdbin)
     check_ref_paths_exist(ref_paths)
+    validate_input_files(map2, resolution, ldp_file, ca_file, ldp_paths)
 
     mode_val = mode.value if isinstance(mode, Mode) else mode
 
@@ -261,9 +281,6 @@ def orig_command(
     # check if the second input is a structure file
     ext, _ = get_file_extension(map2)
     if ext in ["pdb", "cif"]:
-        assert resolution is not None, (
-            "Please specify resolution when using structure as input."
-        )
         # simulate the map at target resolution
         sim_map_path = os.path.join(tempfile.gettempdir(), f"simu_map_{rand_str}.mrc")
         pdb2vol(map2, resolution, sim_map_path, backbone_only=backbone_only)
@@ -271,8 +288,6 @@ def orig_command(
             "Failed to create simulated map from structure."
         )
         map2 = sim_map_path
-
-    assert os.path.exists(map2), "Target map not found, please check -b option"
 
     # Setup GPU
     use_gpu, device = setup_gpu(gpu_id)
@@ -310,13 +325,6 @@ def orig_command(
         Angle_limit_for_searching=angle_limit,
         Direct_fit=True if direct_fit else None,
     )
-
-    if ldp_file or ca_file:
-        assert ldp_file and ca_file, "Please specify both -ldp and -ca options"
-    for ldp_path in ldp_paths or []:
-        assert os.path.exists(ldp_path), "LDP file not found, please check -ldp option"
-    if ca_file:
-        assert os.path.exists(ca_file), "CA file not found, please check -ca option"
 
     if not pdbin or not os.path.exists(pdbin):
         print("No input PDB file, skipping transformation")
