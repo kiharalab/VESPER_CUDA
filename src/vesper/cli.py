@@ -1,9 +1,11 @@
+import math
 import os
 import sys
 import tempfile
 import time
 from enum import Enum
 
+import click
 import numpy as np
 import typer
 
@@ -48,26 +50,27 @@ def validate_ref_args(
     """
     ref_paths = [s for s in maps.split(",") if s]
     if len(ref_paths) == 0:
-        raise ValueError("Empty -a")
+        raise click.UsageError("Empty -a")
     ref_labels = [s for s in labels.split(",") if s] if labels else None
-    if len(ref_paths) >= 2:
-        if not labels:
-            raise ValueError("-labels required when -a has multiple paths")
-        if len(ref_labels) != len(ref_paths):
-            raise ValueError(
-                f"-labels has {len(ref_labels)} entries but -a has {len(ref_paths)} refs"
-            )
+    if len(ref_paths) >= 2 and not labels:
+        raise click.UsageError("-labels required when -a has multiple paths")
+    if labels and len(ref_labels) != len(ref_paths):
+        raise click.UsageError(
+            f"-labels has {len(ref_labels)} entries but -a has {len(ref_paths)} refs"
+        )
     if labels:
         bad = [s for s in ref_labels if "/" in s or ".." in s or s == "."]
         if bad:
-            raise ValueError(f"-labels must not contain '/' or '..', or be '.': {bad}")
+            raise click.UsageError(
+                f"-labels must not contain '/' or '..', or be '.': {bad}"
+            )
         if len(set(ref_labels)) != len(ref_labels):
-            raise ValueError(f"-labels must be unique; got {ref_labels}")
+            raise click.UsageError(f"-labels must be unique; got {ref_labels}")
     if direct_fit and (ldp or ca):
-        raise ValueError("-ldp/-ca incompatible with --direct_fit")
+        raise click.UsageError("-ldp/-ca incompatible with --direct_fit")
     ldp_paths = [s for s in ldp.split(",") if s] if ldp else None
     if ldp and len(ldp_paths) not in (1, len(ref_paths)):
-        raise ValueError(
+        raise click.UsageError(
             f"-ldp must have 1 entry or {len(ref_paths)} entries; got {len(ldp_paths)}"
         )
     return ref_paths, ref_labels, ldp_paths
@@ -95,6 +98,32 @@ def remove_old_score_pkl(
                 os.remove(path)
 
 
+def validate_search_args(
+    angle_spacing: float,
+    refine_top: int,
+    angle_limit: float | None,
+    batch_size: int | None,
+    pdbin: str | None,
+) -> None:
+    """Reject values that leave the search with nothing to do or nothing to write"""
+    if not math.isfinite(angle_spacing) or angle_spacing <= 0:
+        raise click.UsageError(
+            f"-A (angle spacing) must be finite and > 0; got {angle_spacing}"
+        )
+    if refine_top < 1:
+        raise click.UsageError(f"-N (models to refine) must be >= 1; got {refine_top}")
+    if batch_size is not None and batch_size < 1:
+        raise click.UsageError(f"-batch must be >= 1; got {batch_size}")
+    if angle_limit is not None and not (
+        math.isfinite(angle_limit) and angle_limit >= 0
+    ):
+        raise click.UsageError(
+            f"-al (angle limit) must be finite and >= 0; got {angle_limit}"
+        )
+    if pdbin and not os.path.exists(pdbin):
+        raise click.UsageError(f"-pdbin {pdbin} does not exist")
+
+
 def check_ref_paths_exist(ref_paths: list[str]) -> None:
     """Exit with code 1, naming every -a map that is missing"""
     missing = [p for p in ref_paths if not os.path.exists(p)]
@@ -110,13 +139,13 @@ def check_ref_grids(ref_maps: list[EMmap], voxel_spacing: float) -> None:
     ref0 = ref_maps[0]
     for i, ref_map in enumerate(ref_maps[1:], start=1):
         if not np.allclose(ref_map.new_cent, ref0.new_cent, atol=0.5 * voxel_spacing):
-            raise ValueError(
+            raise click.UsageError(
                 f"ref {i} is centred differently from ref 0 by more than half a search "
                 f"voxel ({ref_map.new_cent} vs {ref0.new_cent}): multiple -a maps must "
                 "share one grid"
             )
         if ref_map.xwidth != ref0.xwidth:
-            raise ValueError(
+            raise click.UsageError(
                 f"ref {i} has voxel size {ref_map.xwidth} but ref 0 has {ref0.xwidth}: "
                 "multiple -a maps must share one grid"
             )
@@ -240,6 +269,7 @@ def orig_command(
     ref_paths, ref_labels, ldp_paths = validate_ref_args(
         map1, labels, ldp_file, ca_file, direct_fit
     )
+    validate_search_args(angle_spacing, refine_top, angle_limit, batch_size, pdbin)
     check_ref_paths_exist(ref_paths)
 
     mode_val = mode.value if isinstance(mode, Mode) else mode

@@ -13,6 +13,11 @@ from .data.io import save_rotated_pdb, save_score_pkl, save_vec_as_pdb
 from .utils.utils import get_score
 
 
+def has_spread(score_ave, score_std):
+    """False when the score std is not finite or only float rounding of identical scores"""
+    return bool(np.isfinite(score_std) and score_std > 1e-6 * max(1.0, abs(score_ave)))
+
+
 def dm_fit_scores(top_items, score_ave, score_std):
     """DiffModeler's fit score of each top pose, as its read_score() takes it from the printout.
 
@@ -24,7 +29,9 @@ def dm_fit_scores(top_items, score_ave, score_std):
         values = [item["ldp_recall"] for item in top_items]
     else:
         values = [
-            (item["score"] - score_ave) / score_std if score_std > 0 else 0.0
+            (item["score"] - score_ave) / score_std
+            if has_spread(score_ave, score_std)
+            else 0.0
             for item in top_items
         ]
     return [float(f"{v:.6f}") * 100 for v in values]
@@ -127,6 +134,10 @@ class MapFitter:
 
         # calculate combination of rotation angles
         self._calc_angle_comb()
+        if len(self.angle_comb) == 0:
+            raise ValueError(
+                "No rotations to search: check -A (angle spacing) and -al (angle limit)"
+            )
         # self._calc_angle_comb_quat()
         self.total_rotations = len(self.angle_comb)
 
@@ -678,17 +689,20 @@ class MapFitter:
                 with concurrent.futures.ThreadPoolExecutor(
                     max_workers=self.threads
                 ) as executor:
-                    futures = {
-                        executor.submit(
-                            self._rot_and_search_fft,
+                    futures = [
+                        (
                             rot_ang,
-                            False,
-                            ref_ids,
-                        ): rot_ang
+                            executor.submit(
+                                self._rot_and_search_fft,
+                                rot_ang,
+                                False,
+                                ref_ids,
+                            ),
+                        )
                         for rot_ang in self.angle_comb
-                    }
-                    for future in concurrent.futures.as_completed(futures):
-                        rot_ang = futures[future]
+                    ]
+                    # in angle order, so that tied scores do not depend on timing
+                    for rot_ang, future in futures:
                         map_results = future.result()
                         pbar.update(1)
                         self._add_search_results(search_lists, rot_ang, map_results)
@@ -874,16 +888,19 @@ class MapFitter:
                 with tqdm(
                     total=len(curr_refine_ang_list), position=1, leave=False
                 ) as pbar:
-                    futures = {
-                        executor.submit(
-                            self._rot_and_search_fft,
+                    futures = [
+                        (
                             rot_ang,
-                            False,
-                        ): rot_ang
+                            executor.submit(
+                                self._rot_and_search_fft,
+                                rot_ang,
+                                False,
+                            ),
+                        )
                         for rot_ang in curr_refine_ang_list
-                    }
-                    for future in concurrent.futures.as_completed(futures):
-                        rot_ang = futures[future]
+                    ]
+                    # in angle order, so that tied scores do not depend on timing
+                    for rot_ang, future in futures:
                         # the selected map's (score, vox_trans)
                         result = future.result()[0]
                         pbar.update(1)
@@ -1179,7 +1196,11 @@ class MapFitter:
         )
 
         print("Score=", "{:.6f}".format(item["score"]))
-        norm_score = (item["score"] - self.score_ave) / self.score_std
+        norm_score = (
+            (item["score"] - self.score_ave) / self.score_std
+            if has_spread(self.score_ave, self.score_std)
+            else 0.0
+        )
         print(f"Voxel Trans= {item['vox_trans']}, Normalized Score= {norm_score:.6f}")
 
         if self.ldp_recall_mode:
