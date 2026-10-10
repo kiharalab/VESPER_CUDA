@@ -51,15 +51,15 @@ Score Mean: 67.55975341796875, StDev: 14.882375717163086
 
 ###Start Refining###
 ###Final Results###
-Score Mean: 161.4561767578125, StDev: 16.23258399963379
+Score Mean: 161.4561767578125, StDev: 16.232587814331055
 
 #0 Rotation= (265.0 271.0 5.0) Translation= (-31.145 21.812 -89.688)
 Score= 184.380402
 Voxel Trans= (np.int64(17), np.int64(0), np.int64(1)), Normalized Score= 7.849597
 
 #1 Rotation= (29.0 57.0 63.0) Translation= (49.288 -92.100 121.550)
-Score= 151.045395
-Voxel Trans= (np.int64(1), np.int64(0), np.int64(17)), Normalized Score= 5.609699
+Score= 151.045380
+Voxel Trans= (np.int64(1), np.int64(0), np.int64(17)), Normalized Score= 5.609697
 
 #2 Rotation= (65.0 115.0 27.0) Translation= (45.722 2.866 180.440)
 Score= 148.942749
