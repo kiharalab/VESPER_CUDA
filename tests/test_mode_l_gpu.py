@@ -24,7 +24,6 @@ def _fit(inputs, mode, gpu):
     return fitter.final_list
 
 
-@pytest.mark.parametrize("mode", ["L", "C"])
 def _key(items):
     return [(tuple(i["angle"]), tuple(int(v) for v in i["vox_trans"])) for i in items]
 
