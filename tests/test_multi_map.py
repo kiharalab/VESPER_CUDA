@@ -103,3 +103,21 @@ def test_each_map_gets_its_own_search_on_the_shared_grid(
         assert _outputs(tmp_path / "together" / dirs[i]) == _outputs(
             tmp_path / f"alone{i}"
         )
+
+
+def test_cpu_fitter_plans_fftw_without_timing_on_one_thread(inputs, tmp_path):
+    """-c threads already run rotations, and FFTW_MEASURE timing changes the scores."""
+    import pyfftw.config
+
+    refs, tgt = _grid(inputs, ["a"])
+    for em_map in [*refs, tgt]:
+        em_map.resample_and_vec(dreso=BANDWIDTH)
+    saved = pyfftw.config.NUM_THREADS, pyfftw.config.PLANNER_EFFORT
+    pyfftw.config.NUM_THREADS, pyfftw.config.PLANNER_EFFORT = 4, "FFTW_MEASURE"
+    try:
+        # threads=2 (-c) is what 72fab30 gave FFTW; it also capped it by the CPU count
+        _fit(refs, tgt, "V", str(tmp_path), str(inputs / "model.pdb"))
+        assert pyfftw.config.NUM_THREADS == 1
+        assert pyfftw.config.PLANNER_EFFORT == "FFTW_ESTIMATE"
+    finally:
+        pyfftw.config.NUM_THREADS, pyfftw.config.PLANNER_EFFORT = saved

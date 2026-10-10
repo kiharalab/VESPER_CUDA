@@ -5,7 +5,8 @@
 Upstream's CPU search ranks rotations as their threads finish, so equal scores are ordered by
 timing and, on the tests' small grids, near-ties then decide which poses come out. reproducible()
 takes them in submission order instead, as on the GPU; it changes how the search runs, not what it
-computes. (FFTW is planned without timing and runs one thread per transform, set by MapFitter itself.)
+computes. Once the fitter itself collects CPU results in angle order, this patch has no effect.
+(FFTW is planned without timing and runs one thread per transform, set by MapFitter itself.)
 """
 
 import concurrent.futures
