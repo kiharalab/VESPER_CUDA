@@ -9,11 +9,36 @@ from scipy.ndimage import laplace
 from scipy.spatial.transform import Rotation as R
 from tqdm import tqdm
 
-from .data.io import save_rotated_pdb, save_vec_as_pdb
+from .data.io import save_rotated_pdb, save_score_pkl, save_vec_as_pdb
 from .utils.utils import get_score
 
 
+def dm_fit_scores(top_items, score_ave, score_std):
+    """DiffModeler's fit score of each top pose, as its read_score() takes it from the printout.
+
+    LDP recall when any top pose has a nonzero one, else the normalized score (the pose score
+    against the mean and population std of all search results); rounded as printed (6 decimals)
+    and x100.
+    """
+    if any(item.get("ldp_recall", 0.0) > 0 for item in top_items):
+        values = [item["ldp_recall"] for item in top_items]
+    else:
+        values = [
+            (item["score"] - score_ave) / score_std if score_std > 0 else 0.0
+            for item in top_items
+        ]
+    return [float(f"{v:.6f}") * 100 for v in values]
+
+
 class MapFitter:
+    """Fits the target map into one reference map, or into several at once.
+
+    With several maps (ref is a list), each rotation of the target is scored against every map;
+    each map's results are then deduplicated, reranked, refined, printed and saved on their own,
+    as a run with that map alone on the same grid would do (outputs in <outdir>/<label>). The
+    maps and the target must share one grid size (unify_dims over all of them).
+    """
+
     def __init__(
         self,
         ref,
@@ -35,10 +60,17 @@ class MapFitter:
         save_vec=False,
         score=None,
         batch_size=None,
+        ref_labels=None,
     ):
         print("###Initializing fitter###")
 
-        self.ref_map = ref
+        # one map, or several searched together; ldp_path then names one file for all of
+        # them or one per map, and ref_labels names each map's output folder
+        self.ref_maps = list(ref) if isinstance(ref, (list, tuple)) else [ref]
+        self.ref_labels = ref_labels or [f"ref{i}" for i in range(len(self.ref_maps))]
+        assert len(self.ref_labels) == len(self.ref_maps), "one label per map"
+        # the map that ref_map, the per-map steps and the outputs refer to
+        self.ref_index = 0
         self.tgt_map = tgt
         self.ang_interval = ang_interval
         self.mode = mode
@@ -75,7 +107,7 @@ class MapFitter:
         self.ldp_recall_mode = (ldp_path is not None) and (backbone_path is not None)
         self.ss_mix_score_mode = (
             (alpha is not None)
-            and (self.ref_map.new_ss_data is not None)
+            and all(ref_map.new_ss_data is not None for ref_map in self.ref_maps)
             and (self.tgt_map.new_ss_data is not None)
         )
 
@@ -111,80 +143,46 @@ class MapFitter:
         # if score is not None:
         #     self.refine = False
 
-        # init the target map vectors
-        ref_x_real = self.ref_map.vec[:, :, :, 0]
-
-        # Postprocessing for other modes
-        if mode == "O":
-            ref_x_real = np.where(self.ref_map.new_data > 0, 1.0, 0.0)
-        elif mode == "C":
-            ref_x_real = np.where(self.ref_map.new_data > 0, self.ref_map.new_data, 0.0)
-        elif mode == "P":
-            ref_x_real = np.where(
-                self.ref_map.new_data > 0, self.ref_map.new_data - self.ref_map.ave, 0.0
-            )
-        elif mode == "L":
-            ref_x_real = laplace(self.ref_map.new_data, mode="constant", cval=0.0)
-
-        # init fft transformation for the target map
-        ref_x_fourier = np.fft.rfftn(ref_x_real)
-        ref_x_fourier = np.conj(ref_x_fourier)
-
-        self.ref_map_fft_list = [ref_x_fourier]
-
-        # init fft transformation for the target map
-        if mode == "V":
-            ref_y_real = self.ref_map.vec[:, :, :, 1]
-            ref_z_real = self.ref_map.vec[:, :, :, 2]
-            ref_y_fourier = np.fft.rfftn(ref_y_real)
-            ref_y_fourier = np.conj(ref_y_fourier)
-            ref_z_fourier = np.fft.rfftn(ref_z_real)
-            ref_z_fourier = np.conj(ref_z_fourier)
-            self.ref_map_fft_list = [ref_x_fourier, ref_y_fourier, ref_z_fourier]
-            if self.ss_mix_score_mode:
-                ref_ss_c_real = self.ref_map.new_ss_data[..., 0]  # coil
-                ref_ss_b_real = self.ref_map.new_ss_data[..., 1]  # beta
-                ref_ss_a_real = self.ref_map.new_ss_data[..., 2]  # alpha
-                res_ss_n_real = self.ref_map.new_ss_data[..., 3]  # nucleotide
-                ref_ss_c_fourier = np.fft.rfftn(ref_ss_c_real)
-                ref_ss_c_fourier = np.conj(ref_ss_c_fourier)
-                ref_ss_b_fourier = np.fft.rfftn(ref_ss_b_real)
-                ref_ss_b_fourier = np.conj(ref_ss_b_fourier)
-                ref_ss_a_fourier = np.fft.rfftn(ref_ss_a_real)
-                ref_ss_a_fourier = np.conj(ref_ss_a_fourier)
-                res_ss_n_fourier = np.fft.rfftn(res_ss_n_real)
-                res_ss_n_fourier = np.conj(res_ss_n_fourier)
-                self.ref_map_fft_list.extend(
-                    [
-                        ref_ss_c_fourier,
-                        ref_ss_b_fourier,
-                        ref_ss_a_fourier,
-                        res_ss_n_fourier,
-                    ]
-                )
+        # Fourier transforms of each map's channels
+        self.ref_map_fft_lists = [
+            self._calc_ref_fft_list(ref_map) for ref_map in self.ref_maps
+        ]
 
         # ldp recall mode init
         if self.ldp_recall_mode:
             assert self.gpu, "LDP recall mode only works with GPU"
             import torch
 
+            # one ldp file per map, or one for all of them
+            ldp_paths = [ldp_path] if isinstance(ldp_path, str) else list(ldp_path)
+            if len(ldp_paths) == 1:
+                ldp_paths = ldp_paths * len(self.ref_maps)
+            assert len(ldp_paths) == len(self.ref_maps), (
+                f"{len(ldp_paths)} LDP files for {len(self.ref_maps)} maps"
+            )
+
             # get atom coords from ldp
-            ldp_atoms = []
-            with open(ldp_path) as f:
-                for line in f:
-                    if line.startswith("ATOM"):
-                        ldp_atoms.append(
-                            np.array(
-                                (
-                                    float(line[30:38]),
-                                    float(line[38:46]),
-                                    float(line[46:54]),
+            ldp_atoms_by_path = {}
+            for path in dict.fromkeys(ldp_paths):
+                ldp_atoms = []
+                with open(path) as f:
+                    for line in f:
+                        if line.startswith("ATOM"):
+                            ldp_atoms.append(
+                                np.array(
+                                    (
+                                        float(line[30:38]),
+                                        float(line[38:46]),
+                                        float(line[46:54]),
+                                    )
                                 )
                             )
-                        )
 
-            assert len(ldp_atoms) > 0, "No points found in LDP file."
-            self.ldp_atoms = torch.from_numpy(np.array(ldp_atoms)).to(self.device)
+                assert len(ldp_atoms) > 0, "No points found in LDP file."
+                ldp_atoms_by_path[path] = torch.from_numpy(np.array(ldp_atoms)).to(
+                    self.device
+                )
+            self.ldp_atoms_list = [ldp_atoms_by_path[path] for path in ldp_paths]
 
             # get ca atoms from backbone
             backbone_ca = []
@@ -228,9 +226,12 @@ class MapFitter:
                     .share_memory_()
                 )
 
-            self.ref_map_fft_list_gpu = [
-                torch.from_numpy(fft_arr).to(self.device).share_memory_()
-                for fft_arr in self.ref_map_fft_list
+            self.ref_map_fft_lists_gpu = [
+                [
+                    torch.from_numpy(fft_arr).to(self.device).share_memory_()
+                    for fft_arr in fft_list
+                ]
+                for fft_list in self.ref_map_fft_lists
             ]
 
             # Now initialize GPU buffers after GPU tensors are created
@@ -248,6 +249,74 @@ class MapFitter:
             pyfftw.config.NUM_THREADS = max(
                 os.cpu_count() - 2, 2
             )  # Maybe the CPU is sweating too much?
+
+    @property
+    def ref_map(self):
+        """The selected map (ref_index): the one refinement, the printout and outputs use"""
+        return self.ref_maps[self.ref_index]
+
+    @property
+    def ref_outdir(self):
+        """Output folder of the selected map: outdir, or outdir/<label> with several maps"""
+        if len(self.ref_maps) == 1:
+            return self.outdir
+        return os.path.join(self.outdir, self.ref_labels[self.ref_index])
+
+    def _calc_ref_fft_list(self, ref_map):
+        """Conjugated Fourier transforms of a reference map's channels for the score mode"""
+        # init the target map vectors
+        ref_x_real = ref_map.vec[:, :, :, 0]
+
+        # Postprocessing for other modes
+        if self.mode == "O":
+            ref_x_real = np.where(ref_map.new_data > 0, 1.0, 0.0)
+        elif self.mode == "C":
+            ref_x_real = np.where(ref_map.new_data > 0, ref_map.new_data, 0.0)
+        elif self.mode == "P":
+            ref_x_real = np.where(
+                ref_map.new_data > 0, ref_map.new_data - ref_map.ave, 0.0
+            )
+        elif self.mode == "L":
+            ref_x_real = laplace(ref_map.new_data, mode="constant", cval=0.0)
+
+        # init fft transformation for the target map
+        ref_x_fourier = np.fft.rfftn(ref_x_real)
+        ref_x_fourier = np.conj(ref_x_fourier)
+
+        fft_list = [ref_x_fourier]
+
+        # init fft transformation for the target map
+        if self.mode == "V":
+            ref_y_real = ref_map.vec[:, :, :, 1]
+            ref_z_real = ref_map.vec[:, :, :, 2]
+            ref_y_fourier = np.fft.rfftn(ref_y_real)
+            ref_y_fourier = np.conj(ref_y_fourier)
+            ref_z_fourier = np.fft.rfftn(ref_z_real)
+            ref_z_fourier = np.conj(ref_z_fourier)
+            fft_list = [ref_x_fourier, ref_y_fourier, ref_z_fourier]
+            if self.ss_mix_score_mode:
+                ref_ss_c_real = ref_map.new_ss_data[..., 0]  # coil
+                ref_ss_b_real = ref_map.new_ss_data[..., 1]  # beta
+                ref_ss_a_real = ref_map.new_ss_data[..., 2]  # alpha
+                res_ss_n_real = ref_map.new_ss_data[..., 3]  # nucleotide
+                ref_ss_c_fourier = np.fft.rfftn(ref_ss_c_real)
+                ref_ss_c_fourier = np.conj(ref_ss_c_fourier)
+                ref_ss_b_fourier = np.fft.rfftn(ref_ss_b_real)
+                ref_ss_b_fourier = np.conj(ref_ss_b_fourier)
+                ref_ss_a_fourier = np.fft.rfftn(ref_ss_a_real)
+                ref_ss_a_fourier = np.conj(ref_ss_a_fourier)
+                res_ss_n_fourier = np.fft.rfftn(res_ss_n_real)
+                res_ss_n_fourier = np.conj(res_ss_n_fourier)
+                fft_list.extend(
+                    [
+                        ref_ss_c_fourier,
+                        ref_ss_b_fourier,
+                        ref_ss_a_fourier,
+                        res_ss_n_fourier,
+                    ]
+                )
+
+        return fft_list
 
     def _get_rotation_matrix(self, rot_ang):
         """Get cached rotation matrix or compute and cache if not found"""
@@ -315,16 +384,28 @@ class MapFitter:
             )
 
     def _rot_and_search_fft_batch(
-        self, rot_ang_batch, return_data=False, timing_stats=None, stream=None
+        self,
+        rot_ang_batch,
+        return_data=False,
+        timing_stats=None,
+        stream=None,
+        ref_ids=None,
     ):
-        """Process a batch of rotations on GPU"""
+        """Process a batch of rotations on GPU
+
+        Returns, per rotation, one (score, vox_trans) per map of ref_ids (default: the
+        selected map), as _rot_and_search_fft does.
+        """
         import time
 
         import torch
 
         if not self.gpu:
             # Fall back to sequential processing for CPU
-            return [self._rot_and_search_fft(ang, return_data) for ang in rot_ang_batch]
+            return [
+                self._rot_and_search_fft(ang, return_data, ref_ids)
+                for ang in rot_ang_batch
+            ]
 
         t0 = time.time() if timing_stats is not None else None
 
@@ -388,33 +469,17 @@ class MapFitter:
                     )  # ty:ignore[no-matching-overload]
                 tgt_map_pre_fft_list = [x2]
 
-            # Compute FFT
-            fft_result_list = self._fft_get_prod_list(
-                self.ref_map_fft_list_gpu, tgt_map_pre_fft_list
-            )
-
-            # Find best translation
-            score, vox_trans = self._find_best_trans_by_fft_list(
-                fft_result_list, gpu=True
-            )
-
-            # Normalize score
-            if self.mode == "C":
-                score = score / (self.ref_map.std**2)
-            elif self.mode == "P":
-                score = score / (self.ref_map.std_norm_ave**2)
+            # Find best translation in each map
+            map_results = self._find_best_trans_in_maps(tgt_map_pre_fft_list, ref_ids)
 
             if return_data:
-                results.append(
-                    (
-                        score,
-                        vox_trans,
-                        new_data.cpu().numpy(),
-                        new_vec.cpu().numpy() if new_vec is not None else None,
-                    )
-                )
-            else:
-                results.append((score, vox_trans))
+                new_data_cpu = new_data.cpu().numpy()
+                new_vec_cpu = new_vec.cpu().numpy() if new_vec is not None else None
+                map_results = [
+                    (score, vox_trans, new_data_cpu, new_vec_cpu)
+                    for score, vox_trans in map_results
+                ]
+            results.append(map_results)
 
         if timing_stats is not None:
             timing_stats["fft_and_scoring"] += time.time() - t0
@@ -422,6 +487,7 @@ class MapFitter:
         return results
 
     def fit_ss(self):
+        assert len(self.ref_maps) == 1, "fit_ss searches one map only"
         print("###Start Searching###")
         self.result_list = []
 
@@ -544,8 +610,15 @@ class MapFitter:
             self._save_topn_pdb()
 
     def fit(self):
+        """Search every map with each rotation of the target, then finish each map on its own
+
+        The final poses of map i are in final_lists[i]; result_list, final_list and the score
+        statistics are left at the last map's.
+        """
         print("###Start Searching###")
-        self.result_list = []
+        ref_ids = range(len(self.ref_maps))
+        # one result list per map
+        search_lists = [[] for _ in ref_ids]
 
         # Use batched processing on GPU for better performance
         use_batch = True
@@ -576,7 +649,10 @@ class MapFitter:
 
                     with torch.cuda.stream(stream):
                         batch_results = self._rot_and_search_fft_batch(
-                            batch_angles, return_data=False, stream=stream
+                            batch_angles,
+                            return_data=False,
+                            stream=stream,
+                            ref_ids=ref_ids,
                         )
 
                         # Store results and stream for later synchronization
@@ -590,21 +666,12 @@ class MapFitter:
                     ):
                         for stream, angles, results in stream_futures:
                             stream.synchronize()
-                            for rot_ang, result in zip(angles, results):
-                                self.result_list.append(
-                                    {
-                                        "angle": rot_ang,
-                                        "score": result[0] / self.ref_map.new_data.size,
-                                        "vox_trans": result[1],
-                                    }
+                            for rot_ang, map_results in zip(angles, results):
+                                self._add_search_results(
+                                    search_lists, rot_ang, map_results
                                 )
                             pbar.update(len(angles))
                         stream_futures = []
-
-                for result in self.result_list:
-                    result["real_trans"] = self._convert_trans(
-                        result["angle"], result["vox_trans"]
-                    )
         else:
             # Use original single-rotation path
             with tqdm(total=len(self.angle_comb)) as pbar:
@@ -616,24 +683,49 @@ class MapFitter:
                             self._rot_and_search_fft,
                             rot_ang,
                             False,
+                            ref_ids,
                         ): rot_ang
                         for rot_ang in self.angle_comb
                     }
                     for future in concurrent.futures.as_completed(futures):
                         rot_ang = futures[future]
-                        result = future.result()
+                        map_results = future.result()
                         pbar.update(1)
-                        self.result_list.append(
-                            {
-                                "angle": rot_ang,
-                                "score": result[0] / self.ref_map.new_data.size,
-                                "vox_trans": result[1],
-                            }
-                        )
-                    for result in self.result_list:
-                        result["real_trans"] = self._convert_trans(
-                            result["angle"], result["vox_trans"]
-                        )
+                        self._add_search_results(search_lists, rot_ang, map_results)
+
+        self.final_lists = []
+        for ref_index, result_list in enumerate(search_lists):
+            self.ref_index = ref_index
+            self.result_list = result_list
+            self.refined_list = None
+            self._finish_selected_map()
+            self.final_lists.append(self.final_list)
+
+    def _add_search_results(self, search_lists, rot_ang, map_results):
+        """Append a rotation's best translation in each map to that map's result list"""
+        for result_list, ref_map, (score, vox_trans) in zip(
+            search_lists, self.ref_maps, map_results
+        ):
+            result_list.append(
+                {
+                    "angle": rot_ang,
+                    "score": score / ref_map.new_data.size,
+                    "vox_trans": vox_trans,
+                }
+            )
+
+    def _finish_selected_map(self):
+        """Rank, deduplicate, rerank, refine, print and save the selected map's results"""
+        if len(self.ref_maps) > 1:
+            print(
+                f"\n###Reference Map {self.ref_index}: "
+                f"{self.ref_labels[self.ref_index]}###"
+            )
+
+        for result in self.result_list:
+            result["real_trans"] = self._convert_trans(
+                result["angle"], result["vox_trans"]
+            )
 
         # sort the result list
         self.result_list.sort(key=lambda x: x["score"], reverse=True)
@@ -672,9 +764,11 @@ class MapFitter:
         for i, item in enumerate(self.final_list):
             self._print_result_item(item, i)
 
-        # save rotated pdb structure for visualization
+        # save rotated pdb structure for visualization, with DiffModeler's fit scores
         if self.input_pdb is not None:
-            self._save_topn_pdb()
+            self._save_topn_pdb(
+                dm_fit_scores(self.final_list, self.score_ave, self.score_std)
+            )
 
         # save vectors as pdb for visualization
         if self.save_vec:
@@ -754,12 +848,13 @@ class MapFitter:
                             for stream, angles, results in stream_futures:
                                 stream.synchronize()
                                 for rot_ang, batch_result in zip(angles, results):
+                                    # the selected map's (score, vox_trans)
+                                    score, vox_trans = batch_result[0]
                                     curr_result_list.append(
                                         {
                                             "angle": rot_ang,
-                                            "score": batch_result[0]
-                                            / self.ref_map.new_data.size,
-                                            "vox_trans": batch_result[1],
+                                            "score": score / self.ref_map.new_data.size,
+                                            "vox_trans": vox_trans,
                                         }
                                     )
                                 pbar.update(len(angles))
@@ -789,7 +884,8 @@ class MapFitter:
                     }
                     for future in concurrent.futures.as_completed(futures):
                         rot_ang = futures[future]
-                        result = future.result()
+                        # the selected map's (score, vox_trans)
+                        result = future.result()[0]
                         pbar.update(1)
                         curr_result_list.append(
                             {
@@ -875,23 +971,36 @@ class MapFitter:
             )
         self.refined_list.sort(key=lambda x: x["mix_score"], reverse=True)
 
-    def _save_topn_pdb(self):
-        os.makedirs(os.path.join(self.outdir, "PDB"), exist_ok=True)
+    def _save_topn_pdb(self, fit_scores=None):
+        """Save the top poses of the selected map
+
+        With fit_scores (DiffModeler's, one per pose), each pose's score / 100 goes into its
+        occupancy column and score.pkl maps each pose file to its score.
+        """
+        os.makedirs(os.path.join(self.ref_outdir, "PDB"), exist_ok=True)
+        pose_scores = {}
         for i, item in enumerate(self.final_list):
             rot_mtx = R.from_euler("xyz", item["angle"], degrees=True).inv().as_matrix()
             angle_str = f"rx{int(item['angle'][0])}_ry{int(item['angle'][1])}_rz{int(item['angle'][2])}"
             trans_str = f"tx{item['real_trans'][0]:.3f}_ty{item['real_trans'][1]:.3f}_tz{item['real_trans'][2]:.3f}"
             filename = f"#{i}_{angle_str}_{trans_str}"
+            save_path = os.path.join(self.ref_outdir, "PDB", filename)
             save_rotated_pdb(
                 self.input_pdb,
                 rot_mtx,
                 item["real_trans"],
-                os.path.join(self.outdir, "PDB", filename),
+                save_path,
                 i,
+                occupancy=None if fit_scores is None else fit_scores[i] / 100,
             )
+            if fit_scores is not None:
+                # save_rotated_pdb adds the extension
+                pose_scores[os.path.abspath(save_path + ".pdb")] = fit_scores[i]
+        if fit_scores is not None:
+            save_score_pkl(pose_scores, os.path.join(self.ref_outdir, "score.pkl"))
 
     def _save_topn_vec_as_pdb(self):
-        os.makedirs(os.path.join(self.outdir, "VEC"), exist_ok=True)
+        os.makedirs(os.path.join(self.ref_outdir, "VEC"), exist_ok=True)
         for i, item in enumerate(self.final_list):
             angle_str = f"rx{int(item['angle'][0])}_ry{int(item['angle'][1])}_rz{int(item['angle'][2])}"
             trans_str = f"tx{item['real_trans'][0]:.3f}_ty{item['real_trans'][1]:.3f}_tz{item['real_trans'][2]:.3f}"
@@ -904,12 +1013,12 @@ class MapFitter:
                 item["score"],
                 self.ref_map.new_width,
                 item["vox_trans"],
-                os.path.join(self.outdir, "VEC", filename),
+                os.path.join(self.ref_outdir, "VEC", filename),
                 i,
             )
 
     def _save_topn_mrc(self):
-        os.makedirs(os.path.join(self.outdir, "MRC"), exist_ok=True)
+        os.makedirs(os.path.join(self.ref_outdir, "MRC"), exist_ok=True)
         # TODO: Implement MRC saving
         # for i, item in enumerate(self.final_list):
         #     angle_str = f"rx{int(item['angle'][0])}_ry{int(item['angle'][1])}_rz{int(item['angle'][2])}"
@@ -924,7 +1033,7 @@ class MapFitter:
             ret_dict = self._rot_and_search_fft(
                 result["angle"],
                 True,
-            )
+            )[0]
             result["data"] = ret_dict[2]
             result["vec"] = ret_dict[3]
             sco_arr, overlap, cc, pcc, Nm, total, _dot = get_score(
@@ -974,7 +1083,7 @@ class MapFitter:
             rot_mtx = torch.from_numpy(rot_mtx).to(self.device)
             # rot_mtx = euler_to_mtx(torch.tensor(result["angle"], device=self.device)).t()
             result["ldp_recall"] = self._calc_ldp_recall_score_item(
-                self.ldp_atoms,
+                self.ldp_atoms_list[self.ref_index],
                 self.backbone_ca,
                 rot_mtx,
                 torch.from_numpy(result["real_trans"]).to(self.device),
@@ -1131,13 +1240,12 @@ class MapFitter:
         tgt_map_pre_fft_list.extend([new_ss_data[..., i] for i in range(4)])
 
         if self.gpu:
-            fft_result_list = self._fft_get_prod_list(
-                self.ref_map_fft_list_gpu, tgt_map_pre_fft_list
-            )
+            ref_map_fft_list = self.ref_map_fft_lists_gpu[self.ref_index]
         else:
-            fft_result_list = self._fft_get_prod_list(
-                self.ref_map_fft_list, tgt_map_pre_fft_list
-            )
+            ref_map_fft_list = self.ref_map_fft_lists[self.ref_index]
+        fft_result_list = self._fft_get_prod_list(
+            ref_map_fft_list, self._fft_list(tgt_map_pre_fft_list)
+        )
 
         # convert back to numpy if needed
         if self.gpu and return_data:
@@ -1194,7 +1302,12 @@ class MapFitter:
                 mix_real_trans,
             )
 
-    def _rot_and_search_fft(self, rot_ang, return_data):
+    def _rot_and_search_fft(self, rot_ang, return_data, ref_ids=None):
+        """Rotate the target and find its best translation in each map of ref_ids
+
+        ref_ids defaults to the selected map. Returns one (score, vox_trans) per map, with the
+        rotated data and vectors appended when return_data.
+        """
         if self.gpu:
             import torch
 
@@ -1257,14 +1370,8 @@ class MapFitter:
                     x2 = torch.from_numpy(x2).to(self.device)
                 tgt_map_pre_fft_list = [x2]
 
-        if self.gpu:
-            fft_result_list = self._fft_get_prod_list(
-                self.ref_map_fft_list_gpu, tgt_map_pre_fft_list
-            )
-        else:
-            fft_result_list = self._fft_get_prod_list(
-                self.ref_map_fft_list, tgt_map_pre_fft_list
-            )
+        # Search for best translation using FFT
+        map_results = self._find_best_trans_in_maps(tgt_map_pre_fft_list, ref_ids)
 
         # convert back to numpy if needed
         if self.gpu and return_data:
@@ -1272,21 +1379,44 @@ class MapFitter:
             if new_vec is not None:
                 new_vec = new_vec.cpu().numpy()
 
-        # Search for best translation using FFT
-        score, vox_trans = self._find_best_trans_by_fft_list(
-            fft_result_list, gpu=self.gpu
-        )
-
-        if self.mode == "C":
-            score = score / (self.ref_map.std**2)
-        if self.mode == "P":
-            score = score / (self.ref_map.std_norm_ave**2)
-
         # return data if specified
         if return_data:
-            return score, vox_trans, new_data, new_vec
+            return [
+                (score, vox_trans, new_data, new_vec)
+                for score, vox_trans in map_results
+            ]
         else:
-            return score, vox_trans
+            return map_results
+
+    def _find_best_trans_in_maps(self, tgt_map_pre_fft_list, ref_ids=None):
+        """Best translation of a rotated target in each map of ref_ids (default: the selected map)
+
+        The target's Fourier transforms are taken once and multiplied with each map's.
+        Returns one (score, vox_trans) per map.
+        """
+        if ref_ids is None:
+            ref_ids = [self.ref_index]
+        if self.gpu:
+            ref_map_fft_lists = self.ref_map_fft_lists_gpu
+        else:
+            ref_map_fft_lists = self.ref_map_fft_lists
+        tgt_map_fft_list = self._fft_list(tgt_map_pre_fft_list)
+
+        map_results = []
+        for i in ref_ids:
+            fft_result_list = self._fft_get_prod_list(
+                ref_map_fft_lists[i], tgt_map_fft_list
+            )
+            score, vox_trans = self._find_best_trans_by_fft_list(
+                fft_result_list, gpu=self.gpu
+            )
+
+            if self.mode == "C":
+                score = score / (self.ref_maps[i].std ** 2)
+            if self.mode == "P":
+                score = score / (self.ref_maps[i].std_norm_ave ** 2)
+            map_results.append((score, vox_trans))
+        return map_results
 
     @staticmethod
     def _gpu_rot_map(
@@ -1579,21 +1709,30 @@ class MapFitter:
 
         return new_vec_array, new_data_array, new_ss_array
 
+    def _fft_list(self, tgt_map_pre_fft_list):
+        """Fourier transforms of the rotated target's channels"""
+        if self.gpu:
+            import torch
+
+            return [torch.fft.rfftn(tgt_real) for tgt_real in tgt_map_pre_fft_list]
+        else:
+            from pyfftw.interfaces import numpy_fft
+
+            return [numpy_fft.rfftn(tgt_real) for tgt_real in tgt_map_pre_fft_list]
+
     def _fft_get_prod_list(self, ref_map_fft_list, tgt_map_fft_list):
         dot_product_list = []
         if self.gpu:
             import torch
 
-            for ref_fourier, tgt_real in zip(ref_map_fft_list, tgt_map_fft_list):
-                tgt_fourier = torch.fft.rfftn(tgt_real)
+            for ref_fourier, tgt_fourier in zip(ref_map_fft_list, tgt_map_fft_list):
                 dot_fourier = ref_fourier * tgt_fourier
                 dot_real = torch.fft.irfftn(dot_fourier, norm="forward")
                 dot_product_list.append(dot_real)
         else:
             from pyfftw.interfaces import numpy_fft
 
-            for ref_fourier, tgt_real in zip(ref_map_fft_list, tgt_map_fft_list):
-                tgt_fourier = numpy_fft.rfftn(tgt_real)
+            for ref_fourier, tgt_fourier in zip(ref_map_fft_list, tgt_map_fft_list):
                 dot_fourier = ref_fourier * tgt_fourier
                 dot_real = numpy_fft.irfftn(dot_fourier, norm="forward")
                 dot_product_list.append(dot_real)
