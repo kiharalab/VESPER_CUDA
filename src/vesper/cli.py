@@ -78,8 +78,9 @@ def remove_old_score_pkl(
 ) -> None:
     """Remove an earlier run's score.pkl, which would read as "fit done" if this run dies
 
-    Only a run with -o and -pdbin writes score.pkl. This runs before the argument checks,
-    so it skips label lists that are not a safe one-to-one match with the maps.
+    Every -pdbin run writes score.pkl; only -o folders are cleared (without -o the fitter
+    makes a new folder). This runs before the argument checks, so it skips label lists that
+    are not a safe one-to-one match with the maps.
     """
     if output_dir is None or pdbin is None:
         return
