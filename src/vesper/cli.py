@@ -268,6 +268,13 @@ def orig_command(
         "def=false",
     ),
     output_dir: str | None = typer.Option(None, "-o", help="Output folder name"),
+    vector_dir: str | None = typer.Option(
+        None,
+        "-v",
+        help="Save the resampled vectors of both maps to this folder and exit: "
+        "ref_map_{coords,vecs}.npy and tgt_map_{coords,vecs}.npy (ref_<label>_... "
+        "for several -a maps) def=None",
+    ),
     gpu_id: int | None = typer.Option(
         None, "-gpu", help="GPU ID to use for CUDA acceleration def=0"
     ),
@@ -438,6 +445,13 @@ def orig_command(
 
     end_resample = time.time()
     print(f"Resample time: {end_resample - start_time:.2f} s")
+
+    if vector_dir:
+        os.makedirs(vector_dir, exist_ok=True)
+        for i, ref_map in enumerate(ref_maps):
+            name = f"ref_{ref_labels[i]}" if len(ref_maps) > 1 else "ref_map"
+            ref_map.save_vectors(os.path.join(vector_dir, name))
+        tgt_map.save_vectors(os.path.join(vector_dir, "tgt_map"))
 
     if eval_mode:
         evaluate_current_position(
