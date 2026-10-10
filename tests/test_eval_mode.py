@@ -6,8 +6,12 @@ import re
 import subprocess
 import sys
 
+import numpy as np
 import pytest
 import synthetic
+
+from vesper.data.map import EMmap, unify_dims
+from vesper.utils.utils import get_score
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ARGS = ["-t", "0.05", "-T", "0.05", "-s", "3", "-g", "8", "-E"]
@@ -39,9 +43,7 @@ def test_map_on_itself_scores_perfectly(tmp_path):
 
 
 def test_misplaced_target_scores_lower_and_json_matches(tmp_path):
-    _, (overlap, cc, _, n, total, _) = run_eval(
-        tmp_path, "target.mrc", "-o", "out", "-M", "C"
-    )
+    _, (overlap, cc, _, n, total, _) = run_eval(tmp_path, "target.mrc", "-o", "out")
     assert 0 < overlap < 1 and n < total and cc < 0.9
     with open(tmp_path / "out" / "eval.json") as f:
         record = json.load(f)
@@ -50,5 +52,27 @@ def test_misplaced_target_scores_lower_and_json_matches(tmp_path):
     assert record["n"] == n and record["total"] == total
     assert record["ref"] == str(tmp_path / "a.mrc")
     assert record["target"] == str(tmp_path / "target.mrc")
-    assert record["mode"] == "C"
+    assert "mode" not in record
     assert set(os.listdir(tmp_path / "out")) == {"eval.json"}
+
+
+def test_structure_target_is_recorded_by_its_own_path(tmp_path):
+    # With -res the target is simulated into a temporary map; eval.json names the -b file.
+    run_eval(tmp_path, "model.pdb", "-res", "6", "-T", "0", "-o", "out")
+    with open(tmp_path / "out" / "eval.json") as f:
+        record = json.load(f)
+    assert record["target"] == str(tmp_path / "model.pdb")
+
+
+def test_printed_scores_are_get_score_at_zero_translation(tmp_path):
+    _, printed = run_eval(tmp_path, "target.mrc")
+    ref, tgt = EMmap(str(tmp_path / "a.mrc")), EMmap(str(tmp_path / "target.mrc"))
+    ref.set_vox_size(thr=0.05, voxel_size=3.0)
+    tgt.set_vox_size(thr=0.05, voxel_size=3.0)
+    unify_dims([ref, tgt], voxel_size=3.0)
+    for m in (ref, tgt):
+        m.resample_and_vec(dreso=8.0)
+    _, overlap, cc, pcc, n, total, dot = get_score(
+        ref, tgt.new_data, tgt.vec, np.array((0, 0, 0))
+    )
+    assert printed == pytest.approx([overlap, cc, pcc, n, total, dot], rel=1e-5)

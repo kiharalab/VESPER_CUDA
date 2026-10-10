@@ -107,12 +107,11 @@ def evaluate_current_position(
     ref_paths: list[str],
     tgt_map: EMmap,
     tgt_path: str,
-    mode: str,
     output_dir: str | None,
 ) -> None:
     """Score the target where it sits (no search) and print the scores
 
-    With -o, each map's scores, the two input paths and the mode go to eval.json (in
+    With -o, each map's scores and the two input paths go to eval.json (in
     <-o>/<label> when there are several maps).
     """
     print("### Evaluation Mode ###")
@@ -143,7 +142,6 @@ def evaluate_current_position(
                 **{k: float(v) for k, v in scores.items()},
                 "ref": os.path.abspath(ref_paths[i]),
                 "target": os.path.abspath(tgt_path),
-                "mode": mode,
             }
             with open(os.path.join(folder, "eval.json"), "w") as f:
                 json.dump(record, f, indent=2)
@@ -284,6 +282,7 @@ def orig_command(
     rand_str = "".join(random.choices(string.ascii_letters + string.digits, k=8))
 
     # check if the second input is a structure file
+    target_arg = map2
     ext, _ = get_file_extension(map2)
     if ext in ["pdb", "cif"]:
         assert resolution is not None, (
@@ -389,7 +388,7 @@ def orig_command(
 
     if eval_mode:
         evaluate_current_position(
-            ref_maps, ref_labels, ref_paths, tgt_map, map2, mode_val, output_dir
+            ref_maps, ref_labels, ref_paths, tgt_map, target_arg, output_dir
         )
         raise typer.Exit(code=0)
 
