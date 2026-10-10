@@ -87,7 +87,7 @@ class MapFitter:
         self.save_mrc = save_mrc
         self.save_vec = save_vec
         self.batch_size = batch_size
-        if refine_step not in (1, 2):
+        if not (isinstance(refine_step, (int, np.integer)) and refine_step in (1, 2)):
             raise ValueError(f"refine_step must be 1 or 2, not {refine_step}")
         self.refine_step = refine_step
         self.angle_comb = []

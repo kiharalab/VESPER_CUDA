@@ -2,6 +2,7 @@
 
 import os
 
+import numpy as np
 import pytest
 import synthetic
 from test_golden import CASES, COMMON, golden, run
@@ -15,7 +16,7 @@ def refine_searches(tmp_path, monkeypatch, *extra):
     """Run `vesper orig -N 2`; return the searches made inside refine() and the poses."""
     synthetic.write_inputs(str(tmp_path))
     monkeypatch.chdir(tmp_path)
-    counts, poses = [], []
+    counts, poses, coarse = [], [], []
     search, refine = MapFitter._rot_and_search_fft, MapFitter.refine
     state = {"in_refine": 0}
 
@@ -27,7 +28,9 @@ def refine_searches(tmp_path, monkeypatch, *extra):
     def count_refine(self, *args, **kwargs):
         state["in_refine"] = 1
         before = len(poses)
+        top = [(tuple(r["angle"]), r["score"]) for r in self.result_list[: args[1]]]
         refine(self, *args, **kwargs)
+        coarse.append((top, [r["score"] for r in self.refined_list]))
         counts.append(len(poses) - before)
         state["in_refine"] = 0
 
@@ -37,14 +40,14 @@ def refine_searches(tmp_path, monkeypatch, *extra):
     args[args.index("-N") + 1] = "2"
     result = CliRunner().invoke(app, args)
     assert result.exit_code == 0, result.output
-    return counts, poses, result.output
+    return counts, poses, result.output, coarse
 
 
 @pytest.mark.parametrize(
     ("extra", "per_top"), [([], 216), (["-R", "2"], 216), (["-R", "1"], 1330)]
 )
 def test_candidates_per_top_pose(tmp_path, monkeypatch, extra, per_top):
-    counts, poses, _ = refine_searches(tmp_path, monkeypatch, *extra)
+    counts, poses, _, _ = refine_searches(tmp_path, monkeypatch, *extra)
     # at -R 1 the coarse pose is scored once (stored), not again as the grid's offset 0
     assert counts == [2 * per_top]
     # +-5 degrees around each coarse pose, in steps of -R (mod 360)
@@ -63,7 +66,7 @@ def test_step_must_be_1_or_2(tmp_path, monkeypatch, bad):
     assert "-R" in result.output
 
 
-@pytest.mark.parametrize("bad", [0, 3])
+@pytest.mark.parametrize("bad", [0, 3, 1.0, 2.0, np.float64(2)])
 def test_fitter_rejects_other_steps(bad):
     with pytest.raises(ValueError, match="refine_step"):
         MapFitter(
@@ -86,9 +89,28 @@ def test_explicit_default_matches_golden(tmp_path):
     assert run(tmp_path, [*CASES["A_V_nodup"], "-R", "2"]) == golden("A_V_nodup")
 
 
-def test_step_1_changes_only_the_refined_poses(tmp_path):
+def test_step_1_changes_only_the_refined_poses(tmp_path, monkeypatch):
+    _, poses, output, coarse = refine_searches(tmp_path, monkeypatch, "-R", "1")
+    assert "Refine_step: 1\n" in output
+    top, refined_scores = coarse[0]
+    # offsets from a coarse pose, wrapped to (-180, 180]
+    offsets = [
+        [(p[i] - c[i] + 180) % 360 - 180 for i in range(3)]
+        for c, _ in top
+        for p in poses
+        if max(abs((p[i] - c[i] + 180) % 360 - 180) for i in range(3)) <= 5
+    ]
+    # step 2 only has odd offsets (-5, -3, ..., 5); an all-even one needs -R 1
+    assert any(all(o % 2 == 0 for o in off) for off in offsets)
+    # the coarse pose is stored, not searched again, and still competes
+    assert not {c for c, _ in top} & set(poses)
+    assert all(
+        r >= s for r, s in zip(sorted(refined_scores), sorted(s for _, s in top))
+    )
+
+
+def test_step_1_leaves_the_coarse_stage_alone(tmp_path):
     printout = run(tmp_path, [*CASES["A_V_nodup"], "-R", "1"])
-    assert "Refine_step: 1\n" in printout
     gold = golden("A_V_nodup")
     marker = "###Preliminary Results Summary###"
     assert (
