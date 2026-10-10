@@ -59,3 +59,34 @@ def test_save_vectors_coordinates_are_real_space(tmp_path):
     assert grid.min() >= 0 and grid.max() < emmap.new_dim
     centre = np.array(synthetic.TGT_ORIGIN) + 0.5 * synthetic.TGT_BOX * synthetic.VOXEL
     assert np.linalg.norm(coords.mean(axis=0) - centre) < 15
+
+
+def test_saved_vectors_point_to_an_off_centre_blob(tmp_path):
+    # one blob off-centre by different amounts along x, y, z: a swapped or
+    # sign-flipped component of a coordinate or a vector cannot pass
+    offset = np.array([8.0, -6.0, 4.0])
+    path = str(tmp_path / "blob.mrc")
+    synthetic.write_map(path, [(offset, 1.0)], synthetic.REF_BOX, synthetic.REF_ORIGIN)
+    emmap = EMmap(path)
+    emmap.set_vox_size(thr=0.05, voxel_size=3.0)
+    unify_dims([emmap], voxel_size=3.0)
+    emmap.resample_and_vec(dreso=8.0)
+    emmap.save_vectors(str(tmp_path / "b"))
+    coords = np.load(tmp_path / "b_coords.npy")
+    vecs = np.load(tmp_path / "b_vecs.npy")
+    blob = synthetic._centre(synthetic.REF_BOX, synthetic.REF_ORIGIN) + offset
+
+    # the densest voxel: its coordinate is origin + index * width in x, y, z order
+    index = np.unravel_index(np.argmax(emmap.new_data), emmap.new_data.shape)
+    top = emmap.new_orig + np.array(index) * emmap.new_width
+    assert np.any(np.all(np.isclose(coords, top), axis=1))
+    assert np.all(np.abs(top - blob) <= emmap.new_width)
+
+    # every voxel more than a voxel from the blob has a vector toward its centre
+    to_blob = blob - coords
+    far = np.linalg.norm(to_blob, axis=1) > 2 * emmap.new_width
+    assert far.sum() > 10
+    cosine = np.sum(vecs[far] * to_blob[far], axis=1) / np.linalg.norm(
+        to_blob[far], axis=1
+    )
+    assert cosine.min() > 0.9
