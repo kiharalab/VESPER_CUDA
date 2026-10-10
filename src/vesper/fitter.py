@@ -378,24 +378,23 @@ class MapFitter:
         )
         return batch
 
-    def _fit_batch_size(self, batch_size, ref_ids):
-        """Halve batch_size until one round (a batch on every stream) fits in GPU memory"""
+    def _fit_batch_size(self, batch_size, ref_ids, angles):
+        """Halve batch_size until one round over angles (a batch per stream) fits"""
         import gc
 
         import torch
 
         def try_batch(n):
             try:
-                # the search's first round: batches of n over the angles, the last the remainder
-                batches = [
-                    self.angle_comb[i : i + n]
-                    for i in range(0, len(self.angle_comb), n)
-                ][: len(self.cuda_streams)]
+                # the first round: batches of n over the angles, the last the remainder
+                batches = [angles[i : i + n] for i in range(0, len(angles), n)][
+                    : len(self.cuda_streams)
+                ]
                 streams = self.cuda_streams[: len(batches)]
-                for stream, angles in zip(streams, batches):
+                for stream, batch in zip(streams, batches):
                     with torch.cuda.stream(stream):
                         self._rot_and_search_fft_batch(
-                            angles, stream=stream, ref_ids=ref_ids
+                            batch, stream=stream, ref_ids=ref_ids
                         )
                 for stream in streams:
                     stream.synchronize()
@@ -676,7 +675,9 @@ class MapFitter:
                 print(f"Using override batch size: {batch_size}")
             else:
                 batch_size = self._get_optimal_batch_size()
-            self.batch_size = batch_size = self._fit_batch_size(batch_size, ref_ids)
+            self.batch_size = batch_size = self._fit_batch_size(
+                batch_size, ref_ids, self.angle_comb
+            )
 
             # Single-threaded batch processing with CUDA streams for overlap
             import torch
@@ -830,6 +831,8 @@ class MapFitter:
         print("###Start Refining###")
         self.refined_list = []
         top_n_list = self.result_list[:top_n]
+        # probed apart from the search, whose probe may have run fewer rotations (-al)
+        refine_batch_size = None
 
         for result in tqdm(top_n_list, desc="Refining Top N", position=0):
             # the coarse pose competes with its neighbours: the offsets below are odd (-5, -3, ..., 5), so
@@ -867,6 +870,11 @@ class MapFitter:
                     batch_size = len(
                         curr_refine_ang_list
                     )  # Process all refinement angles in one batch
+                if refine_batch_size is None:
+                    refine_batch_size = self._fit_batch_size(
+                        batch_size, None, curr_refine_ang_list
+                    )
+                batch_size = refine_batch_size
 
                 with tqdm(
                     total=len(curr_refine_ang_list), position=1, leave=False
