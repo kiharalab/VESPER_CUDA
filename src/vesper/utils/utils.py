@@ -120,7 +120,7 @@ def get_score(ref_map, tgt_map_data, tgt_map_vec, trans):
     search_pos = target_pos + t
 
     total += np.count_nonzero(
-        ref_map_data[target_pos[:, 0], target_pos[:, 1], target_pos[:, 2]]
+        ref_map_data[target_pos[:, 0], target_pos[:, 1], target_pos[:, 2]] > 0
     )
 
     combined_arr = np.hstack((target_pos, search_pos))
@@ -141,7 +141,7 @@ def get_score(ref_map, tgt_map_data, tgt_map_vec, trans):
     d2 = tgt_map_data[search_pos[:, 0], search_pos[:, 1], search_pos[:, 2]]
 
     d1 = np.where(d1 <= 0, 0.0, d1)  # trim negative values
-    d2 = np.where(d2 <= 0, 0.0, d1)  # trim negative values
+    d2 = np.where(d2 <= 0, 0.0, d2)  # trim negative values
 
     pd1 = np.where(d1 <= 0, 0.0, d1 - ave1)  # trim negative values
     pd2 = np.where(d2 <= 0, 0.0, d2 - ave2)  # trim negative values
@@ -150,7 +150,7 @@ def get_score(ref_map, tgt_map_data, tgt_map_vec, trans):
     pcc = np.sum(np.multiply(pd1, pd2))  # Pearson cross correlation
 
     target_zero_mask = (
-        ref_map_data[target_pos[:, 0], target_pos[:, 1], target_pos[:, 2]] == 0
+        ref_map_data[target_pos[:, 0], target_pos[:, 1], target_pos[:, 2]] <= 0
     )
     target_non_zero_mask = (
         ref_map_data[target_pos[:, 0], target_pos[:, 1], target_pos[:, 2]] > 0
@@ -177,7 +177,7 @@ def get_score(ref_map, tgt_map_data, tgt_map_vec, trans):
     sco_sum = np.sum(sco_arr)
     Nm = np.count_nonzero(np.multiply(target_non_zero_mask, search_non_zero_mask))
 
-    overlap = float(Nm) / float(total)
+    overlap = float(Nm) / float(total) if total else 0.0
     cc = cc / (std1 * std2)  # cross correlation
     pcc = pcc / (pstd1 * pstd2)  # Pearson cross correlation
     dot = sco_sum
