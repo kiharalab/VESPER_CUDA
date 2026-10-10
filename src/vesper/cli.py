@@ -73,6 +73,28 @@ def validate_ref_args(
     return ref_paths, ref_labels, ldp_paths
 
 
+def remove_old_score_pkl(
+    output_dir: str | None, pdbin: str | None, map1: str, labels: str | None
+) -> None:
+    """Remove an earlier run's score.pkl, which would read as "fit done" if this run dies
+
+    Only a run with -o and -pdbin writes score.pkl. This runs before the argument checks,
+    so it skips label lists that are not a safe one-to-one match with the maps.
+    """
+    if output_dir is None or pdbin is None:
+        return
+    n_maps = len(map1.split(","))
+    names = [""] if n_maps == 1 else (labels or "").split(",")
+    unsafe = n_maps > 1 and any(s in ("", ".") or "/" in s or ".." in s for s in names)
+    if len(names) != n_maps or unsafe:
+        return
+    for name in names:
+        for file in ("score.pkl", "score.pkl.tmp"):
+            path = os.path.join(output_dir, name, file)
+            if os.path.exists(path):
+                os.remove(path)
+
+
 def check_ref_paths_exist(ref_paths: list[str]) -> None:
     """Exit with code 1, naming every -a map that is missing"""
     missing = [p for p in ref_paths if not os.path.exists(p)]
@@ -214,6 +236,7 @@ def orig_command(
     import random
     import string
 
+    remove_old_score_pkl(output_dir, pdbin, map1, labels)
     ref_paths, ref_labels, ldp_paths = validate_ref_args(
         map1, labels, ldp_file, ca_file, direct_fit
     )

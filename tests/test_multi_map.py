@@ -105,36 +105,13 @@ def test_each_map_gets_its_own_search_on_the_shared_grid(
         )
 
 
-def test_rerun_removes_the_old_score_pkl_before_the_search_ends(
-    inputs, tmp_path, monkeypatch
-):
-    """A rerun that dies must not leave the last run's score.pkl, which reads as fit done"""
-    refs, tgt = _grid(inputs, ["a", "c"])
-    for em_map in [*refs, tgt]:
-        em_map.resample_and_vec(dreso=BANDWIDTH)
-    model = str(inputs / "model.pdb")
-    out = tmp_path / "out"
-    for sub in ("a", "c"):
-        (out / sub).mkdir(parents=True)
-        for name in ("score.pkl", "score.pkl.tmp"):
-            (out / sub / name).write_bytes(b"old")
-
-    def die(self, *args, **kwargs):
-        raise RuntimeError("rerun died")
-
-    monkeypatch.setattr(MapFitter, "_save_topn_pdb", die)
-    with pytest.raises(RuntimeError, match="rerun died"):
-        _fit(refs, tgt, "V", str(out), model, ["a", "c"])
-
-    assert [sorted(os.listdir(out / sub)) for sub in ("a", "c")] == [[], []]
-
-
 def test_score_pkl_holds_the_ldp_recall_times_100(inputs, tmp_path, monkeypatch):
     """LDP recall needs a GPU; its values are stubbed, the path to score.pkl is not"""
 
     def stub_recall(self, results, sort=False, progress_bar=True):
         for result in results:
-            result["ldp_recall"] = 0.8123456
+            # a different recall for each pose
+            result["ldp_recall"] = 0.1 + (sum(map(abs, result["real_trans"])) % 8) / 10
 
     monkeypatch.setattr(MapFitter, "_calc_ldp_recall", stub_recall)
     refs, tgt = _grid(inputs, ["a"])
@@ -149,4 +126,7 @@ def test_score_pkl_holds_the_ldp_recall_times_100(inputs, tmp_path, monkeypatch)
 
     with open(tmp_path / "score.pkl", "rb") as f:
         scores = list(pickle.load(f).values())
-    assert scores == [float("0.812346") * 100] * 3
+    final = [item["ldp_recall"] * 100 for item in fitter.final_list]
+    assert len(set(final)) > 1
+    assert scores == pytest.approx(final)
+    assert scores == sorted(scores, reverse=True)

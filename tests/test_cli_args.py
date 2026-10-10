@@ -182,3 +182,61 @@ def test_cli_hands_maps_labels_and_ldp_files_to_the_fitter(
     assert f"Reference_Map_Paths: {here}/a.mrc,{here}/b.mrc\n" in out
     assert "Reference_Map_Labels: x,y\n" in out
     assert "Reference_Map_Path:" not in out
+
+
+def _old_score_pkls(tmp_path, folders):
+    for folder in folders:
+        (tmp_path / "out" / folder).mkdir(parents=True)
+        for name in ("score.pkl", "score.pkl.tmp"):
+            (tmp_path / "out" / folder / name).write_bytes(b"old")
+    for name in ("a.mrc", "b.mrc", "t.mrc", "model.pdb"):
+        (tmp_path / name).write_bytes(b"")
+
+
+def _left(tmp_path, folders):
+    return [sorted(os.listdir(tmp_path / "out" / folder)) for folder in folders]
+
+
+@pytest.mark.parametrize(
+    ("maps", "folders"), [("a.mrc", [""]), ("a.mrc,b.mrc", ["x", "y"])]
+)
+@pytest.mark.parametrize("failure", ["gpu", "direct_fit_ldp", "missing_map"])
+def test_a_run_that_fails_before_fit_leaves_no_old_score_pkl(
+    tmp_path, monkeypatch, maps, folders, failure
+):
+    """Setup, argument and file checks all come after the removal"""
+    monkeypatch.chdir(tmp_path)
+    _old_score_pkls(tmp_path, folders)
+    args = ["orig", "-a", maps, "-b", "t.mrc", "-o", "out", "-pdbin", "model.pdb"]
+    if len(folders) > 1:
+        args += ["-labels", ",".join(folders)]
+    if failure == "gpu":
+        args += ["-gpu", "0"]
+        monkeypatch.setattr(cli, "setup_gpu", _no_cuda)
+    elif failure == "direct_fit_ldp":
+        args += ["--direct_fit", "-ldp", "l.txt"]
+    else:
+        args[2] = maps.replace("a.mrc", "gone.mrc")
+    result = CliRunner().invoke(app, args)
+    assert result.exit_code != 0
+    assert _left(tmp_path, folders) == [[]] * len(folders)
+
+
+def _no_cuda(gpu_id):
+    raise ValueError("GPU is specified but CUDA is not available.")
+
+
+@pytest.mark.parametrize(
+    ("maps", "folders"), [("a.mrc", [""]), ("a.mrc,b.mrc", ["x", "y"])]
+)
+def test_a_run_without_pdbin_keeps_the_score_pkl(tmp_path, monkeypatch, maps, folders):
+    """Only a run with -pdbin writes score.pkl, so only it replaces one"""
+    monkeypatch.chdir(tmp_path)
+    _old_score_pkls(tmp_path, folders)
+    monkeypatch.setattr(cli, "setup_gpu", _no_cuda)
+    args = ["orig", "-a", maps, "-b", "t.mrc", "-o", "out", "-gpu", "0"]
+    if len(folders) > 1:
+        args += ["-labels", ",".join(folders)]
+    result = CliRunner().invoke(app, args)
+    assert isinstance(result.exception, ValueError)
+    assert _left(tmp_path, folders) == [["score.pkl", "score.pkl.tmp"]] * len(folders)
