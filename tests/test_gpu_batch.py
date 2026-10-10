@@ -1,5 +1,7 @@
 """GPU batch size: sized from free memory, halved on out-of-memory, never changing results."""
 
+import contextlib
+
 import pytest
 import torch
 from test_multi_map import BANDWIDTH, _grid, _poses
@@ -117,3 +119,41 @@ def test_gpu_out_of_memory_halves_and_completes(inputs, tmp_path, monkeypatch, c
     assert "GPU out of memory at batch 64: retrying with 32" in out
     assert "GPU out of memory at batch 8: retrying with 4" in out
     assert halved == expected
+
+
+def test_odd_batch_reports_the_size_that_failed(capsys):
+    tried, try_batch = fake_allocator(capacity=40)
+    assert fit_batch_size(65, try_batch) == 32
+    assert tried == [65, 32]
+    assert "GPU out of memory at batch 65: retrying with 32" in capsys.readouterr().out
+
+
+def _probe(monkeypatch, n_angles, batch_size, num_streams=4):
+    """Rotations each stream gets from the probe of _fit_batch_size, as (stream, count)"""
+    from types import SimpleNamespace
+
+    from vesper import fitter as fitter_module
+
+    monkeypatch.setattr(torch.cuda, "stream", lambda stream: contextlib.nullcontext())
+    monkeypatch.setattr(torch.cuda, "empty_cache", lambda: None)
+    launched = []
+
+    class Stream:
+        def synchronize(self):
+            pass
+
+    stub = SimpleNamespace(
+        angle_comb=list(range(n_angles)),
+        cuda_streams=[Stream() for _ in range(num_streams)],
+        _rot_and_search_fft_batch=lambda angles, stream, ref_ids: launched.append(
+            len(angles)
+        ),
+    )
+    assert fitter_module.MapFitter._fit_batch_size(stub, batch_size, [0]) == batch_size
+    return launched
+
+
+def test_probe_launches_no_more_than_the_search_would(monkeypatch):
+    assert _probe(monkeypatch, 100, 64) == [64, 64]  # 2 batches, so 2 streams
+    assert _probe(monkeypatch, 10, 64) == [10]  # one batch of all 10 rotations
+    assert _probe(monkeypatch, 1000, 64) == [64] * 4

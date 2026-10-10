@@ -53,10 +53,8 @@ def fit_batch_size(batch_size, try_batch):
         except (torch.cuda.OutOfMemoryError, RuntimeError) as error:
             if not is_cuda_oom(error) or batch_size == 1:
                 raise
-        batch_size //= 2
-        print(
-            f"GPU out of memory at batch {batch_size * 2}: retrying with {batch_size}"
-        )
+        failed, batch_size = batch_size, batch_size // 2
+        print(f"GPU out of memory at batch {failed}: retrying with {batch_size}")
 
 
 class MapFitter:
@@ -388,13 +386,15 @@ class MapFitter:
 
         def try_batch(n):
             try:
-                angles = [self.angle_comb[i % len(self.angle_comb)] for i in range(n)]
-                for stream in self.cuda_streams:
+                # no more than the search itself runs: batches of n over the angles
+                angles = self.angle_comb[:n]
+                rounds = -(-len(self.angle_comb) // n)
+                for stream in self.cuda_streams[:rounds]:
                     with torch.cuda.stream(stream):
                         self._rot_and_search_fft_batch(
                             angles, stream=stream, ref_ids=ref_ids
                         )
-                for stream in self.cuda_streams:
+                for stream in self.cuda_streams[:rounds]:
                     stream.synchronize()
             finally:
                 gc.collect()
