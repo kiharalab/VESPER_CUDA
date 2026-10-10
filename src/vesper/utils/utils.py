@@ -177,7 +177,7 @@ def get_score(ref_map, tgt_map_data, tgt_map_vec, trans):
     sco_sum = np.sum(sco_arr)
     Nm = np.count_nonzero(np.multiply(target_non_zero_mask, search_non_zero_mask))
 
-    overlap = float(Nm) / float(total)
+    overlap = float(Nm) / float(total) if total else 0.0
     cc = cc / (std1 * std2)  # cross correlation
     pcc = pcc / (pstd1 * pstd2)  # Pearson cross correlation
     dot = sco_sum
