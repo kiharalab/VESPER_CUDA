@@ -2,7 +2,8 @@
 
 data/golden_880f7d9 holds 880f7d9's runs (CPU, through tests/run_cli.py) on the synthetic inputs,
 with the printout normalized as below. Pose files now carry DiffModeler's fit score in their
-occupancy column, and score.pkl is new; everything else must match byte for byte. Maps a and b
+occupancy column, and score.pkl is new; everything else must match byte for byte, except -nodup's kept count (and B's #2),
+which changed when duplicates were found by rotation angle (test_dedup.py). Maps a and b
 get the same search grid, so searched together each must give its own golden.
 Mode V's printouts were regenerated when its channels came to be summed in frequency space: the
 scores moved in their last printed digit (up to 3e-7 relative), the poses and their order did not.

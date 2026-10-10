@@ -1174,67 +1174,34 @@ class MapFitter:
             results.sort(key=lambda x: x["ldp_recall"], reverse=True)
 
     def _remove_dup_results(self):
-        no_dup_results = []
-
         print("###Start Duplicate Removal###")
 
-        # duplicate removal
-        hash_angs = {}
-
-        # non_dup_count = 0
-
-        # at least 30 degrees apart
-        n_angles_apart = 30 // self.ang_interval  # could be directly specified
-        ang_range = n_angles_apart * int(self.ang_interval)
-        ang_range = int(ang_range)
-
-        for result in tqdm(self.result_list, desc="Removing Duplicates"):
-            # duplicate removal
-            if tuple(result["angle"]) in hash_angs:
-                # print(f"Duplicate: {result_mrc['angle']}")
-                trans = hash_angs[tuple(result["angle"])]
-                # manhattan distance
-                if np.sum(np.abs(trans - result["vox_trans"])) < self.tgt_map.new_dim:
-                    # result_mrc["vec_score"] = 0
-                    continue
-
-            # add to hash
-            hash_angs[tuple(result["angle"])] = np.array(result["vox_trans"])
-
-            ang_x, ang_y, ang_z = (
-                int(result["angle"][0]),
-                int(result["angle"][1]),
-                int(result["angle"][2]),
+        # a pose is a duplicate of a better one at most 30 degrees away in rotation
+        # (the angle between the two rotations) and close in translation
+        if not self.result_list:
+            return
+        quats = R.from_euler(
+            "xyz", [r["angle"] for r in self.result_list], degrees=True
+        ).as_quat()
+        trans = np.array([r["vox_trans"] for r in self.result_list])
+        kept = np.empty(len(quats), dtype=int)
+        kept_quats = np.empty_like(quats)
+        n_kept = 0
+        for i in tqdm(range(len(quats)), desc="Removing Duplicates"):
+            theta = np.degrees(
+                2 * np.arccos(np.clip(np.abs(kept_quats[:n_kept] @ quats[i]), 0, 1))
             )
-
-            # add surrounding angles to hash
-            for xx in range(
-                ang_x - ang_range, ang_x + ang_range + 1, int(self.ang_interval)
+            near = kept[:n_kept][theta <= 30 + 1e-6]
+            # manhattan distance
+            if np.any(
+                np.abs(trans[near] - trans[i]).sum(axis=-1) < self.tgt_map.new_dim
             ):
-                for yy in range(
-                    ang_y - ang_range, ang_y + ang_range + 1, int(self.ang_interval)
-                ):
-                    for zz in range(
-                        ang_z - ang_range, ang_z + ang_range + 1, int(self.ang_interval)
-                    ):
-                        x_positive = xx % 360
-                        y_positive = yy % 360
-                        z_positive = zz % 180
+                continue
+            kept[n_kept] = i
+            kept_quats[n_kept] = quats[i]
+            n_kept += 1
 
-                        x_positive = x_positive + 360 if x_positive < 0 else x_positive
-                        y_positive = y_positive + 360 if y_positive < 0 else y_positive
-                        z_positive = z_positive + 180 if z_positive < 0 else z_positive
-
-                        curr_trans = np.array(
-                            [x_positive, y_positive, z_positive]
-                        ).astype(np.float64)
-                        # insert into hash
-                        hash_angs[tuple(curr_trans)] = np.array(result["vox_trans"])
-
-            # non_dup_count += 1
-            no_dup_results.append(result)
-
-        self.result_list = no_dup_results
+        self.result_list = [self.result_list[i] for i in kept[:n_kept]]
 
     @staticmethod
     def _print_result_stats(results, return_stats=False):

@@ -47,11 +47,11 @@ Cached 816 rotation matrices
 Score Mean: 62.278099060058594, StDev: 12.262580871582031
 
 ###Start Duplicate Removal###
-#Non-duplicate count: 520
+#Non-duplicate count: 284
 
 ###Start Refining###
 ###Final Results###
-Score Mean: 116.92537689208984, StDev: 2.7549211978912354
+Score Mean: 115.681396484375, StDev: 3.940960645675659
 
 #0 Rotation= (115.0 355.0 63.0) Translation= (-51.589 -63.144 -39.935)
 Score= 120.821426
@@ -61,6 +61,6 @@ Voxel Trans= (np.int64(3), np.int64(0), np.int64(0)), Normalized Score= 4.774144
 Score= 114.977356
 Voxel Trans= (np.int64(2), np.int64(16), np.int64(2)), Normalized Score= 4.297566
 
-#2 Rotation= (205.0 303.0 175.0) Translation= (126.738 -41.565 -54.988)
-Score= 114.977356
-Voxel Trans= (np.int64(2), np.int64(16), np.int64(2)), Normalized Score= 4.297566
+#2 Rotation= (175.0 355.0 151.0) Translation= (116.944 -98.564 25.737)
+Score= 111.245415
+Voxel Trans= (np.int64(17), np.int64(0), np.int64(17)), Normalized Score= 3.993231
