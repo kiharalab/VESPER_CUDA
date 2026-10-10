@@ -53,7 +53,18 @@ def _old_angles(interval, limit):
 # No behaviour change is intended: this passes on c8561d2 and on the clearer code.
 @pytest.mark.parametrize(
     ("interval", "limit"),
-    [(10, 20), (5, 15), (30, 60), (10, 0), (30, 200), (7, 20), (12, 190), (30, None)],
+    [
+        (10, 20),
+        (5, 15),
+        (30, 60),
+        (10, 0),
+        (30, 200),
+        (7, 20),
+        (12, 190),
+        (30, None),
+        (10, 400),
+        (10, 700),
+    ],
 )
 def test_ordered_angles_match_c8561d2(interval, limit):
     np.testing.assert_array_equal(

@@ -1816,10 +1816,10 @@ class MapFitter:
             y_angle = np.arange(0, xy_limit, self.ang_interval)
             z_angle = np.arange(0, z_limit + 1, self.ang_interval)
 
-        # make sure positive angles are in the range of 0-360
-        x_angle[x_angle < 0] += 360
-        y_angle[y_angle < 0] += 360
-        z_angle[z_angle < 0] += 360
+        # make negative angles positive; c8561d2 added 360 up to three times
+        x_angle[x_angle < 0] %= 360
+        y_angle[y_angle < 0] %= 360
+        z_angle[z_angle < 0] %= 360
 
         angle_comb = np.array(np.meshgrid(x_angle, y_angle, z_angle)).T.reshape(-1, 3)
 
