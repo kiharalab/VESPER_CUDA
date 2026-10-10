@@ -251,6 +251,14 @@ def orig_command(
     save_models: bool = typer.Option(
         False, "-S", help="Show topN models in PDB format def=false"
     ),
+    refine_step: int = typer.Option(
+        2,
+        "-R",
+        min=1,
+        max=2,
+        help="Refinement step in degrees, 1 or 2 def=2; each Euler angle is tried "
+        "within +-5 degrees of the coarse pose (2: 216 poses, 1: 1331 poses)",
+    ),
     mode: Mode = typer.Option(
         Mode.VEC_PRODUCT,
         "-M",
@@ -393,6 +401,7 @@ def orig_command(
         Backbone_PDB_file=os.path.abspath(ca_file) if ca_file else None,
         Angle_limit_for_searching=angle_limit,
         Direct_fit=True if direct_fit else None,
+        Refine_step=refine_step if refine_step != 2 else None,
     )
 
     if ldp_file or ca_file:
@@ -479,6 +488,7 @@ def orig_command(
         save_vec=save_models,
         batch_size=batch_size,
         ref_labels=ref_labels,
+        refine_step=refine_step,
     )
     fitter.fit()
 
