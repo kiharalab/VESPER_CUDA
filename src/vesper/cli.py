@@ -1,3 +1,4 @@
+import math
 import os
 import sys
 import tempfile
@@ -81,14 +82,20 @@ def validate_search_args(
     pdbin: str | None,
 ) -> None:
     """Reject values that leave the search with nothing to do or nothing to write"""
-    if angle_spacing <= 0:
-        raise click.UsageError(f"-A (angle spacing) must be > 0; got {angle_spacing}")
+    if not math.isfinite(angle_spacing) or angle_spacing <= 0:
+        raise click.UsageError(
+            f"-A (angle spacing) must be finite and > 0; got {angle_spacing}"
+        )
     if refine_top < 1:
         raise click.UsageError(f"-N (models to refine) must be >= 1; got {refine_top}")
     if batch_size is not None and batch_size < 1:
         raise click.UsageError(f"-batch must be >= 1; got {batch_size}")
-    if angle_limit is not None and angle_limit < 0:
-        raise click.UsageError(f"-al (angle limit) must be >= 0; got {angle_limit}")
+    if angle_limit is not None and not (
+        math.isfinite(angle_limit) and angle_limit >= 0
+    ):
+        raise click.UsageError(
+            f"-al (angle limit) must be finite and >= 0; got {angle_limit}"
+        )
     if pdbin and not os.path.exists(pdbin):
         raise click.UsageError(f"-pdbin {pdbin} does not exist")
 

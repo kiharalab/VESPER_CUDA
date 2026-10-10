@@ -3,7 +3,7 @@
 import concurrent.futures
 import re
 import shutil
-import time
+from math import inf, nan
 from types import SimpleNamespace
 
 import click
@@ -14,7 +14,7 @@ from typer.testing import CliRunner
 
 from vesper import cli
 from vesper.cli import app, validate_search_args
-from vesper.fitter import MapFitter
+from vesper.fitter import MapFitter, dm_fit_scores, has_spread
 
 
 def _fitter(inputs, **kwargs):
@@ -28,14 +28,8 @@ def _backwards(futures):
     return iter(reversed(list(futures)))
 
 
-def _slow_early_first(fitter, angles):
-    delay = {tuple(a): 0.005 * (len(angles) - i) for i, a in enumerate(angles)}
-
-    def search(rot_ang, return_data, ref_ids=None):
-        time.sleep(delay[tuple(rot_ang)])  # early angles finish last
-        return [(1.0, (0, 0, 0))]
-
-    return search
+def _constant_search(rot_ang, return_data, ref_ids=None):
+    return [(1.0, (0, 0, 0))]
 
 
 def test_cpu_results_come_back_in_angle_order(inputs, monkeypatch):
@@ -43,9 +37,7 @@ def test_cpu_results_come_back_in_angle_order(inputs, monkeypatch):
     fitter = _fitter(inputs)
     angles = [tuple(a) for a in fitter.angle_comb]
     seen = []
-    monkeypatch.setattr(
-        fitter, "_rot_and_search_fft", _slow_early_first(fitter, angles)
-    )
+    monkeypatch.setattr(fitter, "_rot_and_search_fft", _constant_search)
     monkeypatch.setattr(
         fitter, "_add_search_results", lambda lists, rot_ang, res: seen.append(rot_ang)
     )
@@ -67,9 +59,7 @@ def test_cpu_refinement_takes_ties_in_angle_order(inputs, monkeypatch):
         for y in range(25, 36, 2)
         for z in range(25, 36, 2)
     ]
-    monkeypatch.setattr(
-        fitter, "_rot_and_search_fft", _slow_early_first(fitter, neighbours)
-    )
+    monkeypatch.setattr(fitter, "_rot_and_search_fft", _constant_search)
     fitter.refine(2, 1)
     assert tuple(fitter.refined_list[0]["angle"]) == tuple(neighbours[0])
 
@@ -116,11 +106,18 @@ def test_default_search_args_pass():
 @pytest.mark.parametrize(
     ("change", "message"),
     [
-        ({"angle_spacing": 0.0}, "-A (angle spacing) must be > 0; got 0.0"),
-        ({"angle_spacing": -5.0}, "-A (angle spacing) must be > 0; got -5.0"),
+        ({"angle_spacing": 0.0}, "-A (angle spacing) must be finite and > 0; got 0.0"),
+        (
+            {"angle_spacing": -5.0},
+            "-A (angle spacing) must be finite and > 0; got -5.0",
+        ),
+        ({"angle_spacing": inf}, "-A (angle spacing) must be finite and > 0; got inf"),
+        ({"angle_spacing": nan}, "-A (angle spacing) must be finite and > 0; got nan"),
         ({"refine_top": 0}, "-N (models to refine) must be >= 1; got 0"),
         ({"batch_size": 0}, "-batch must be >= 1; got 0"),
-        ({"angle_limit": -1.0}, "-al (angle limit) must be >= 0; got -1.0"),
+        ({"angle_limit": -1.0}, "-al (angle limit) must be finite and >= 0; got -1.0"),
+        ({"angle_limit": inf}, "-al (angle limit) must be finite and >= 0; got inf"),
+        ({"angle_limit": nan}, "-al (angle limit) must be finite and >= 0; got nan"),
         ({"pdbin": "gone.pdb"}, "-pdbin gone.pdb does not exist"),
     ],
 )
@@ -159,3 +156,14 @@ def test_pdbin_stays_optional(inputs, tmp_path, monkeypatch, out):
     result = CliRunner().invoke(app, [*args, "-s", "3", "-g", "8", *out])
     assert result.exit_code == 0, result.output
     assert "No input PDB file, skipping transformation" in result.stdout
+
+
+def test_rounding_noise_is_no_spread():
+    scores = np.full(1000, 0.1, dtype=np.float32)
+    ave, std = scores.mean(), scores.std()
+    assert not has_spread(ave, std)
+    assert not has_spread(1.0, float("nan"))
+    assert has_spread(1.0, 0.5)
+    item = {"score": float(scores[0]), "ldp_recall": 0.0}
+    assert dm_fit_scores([item], ave, std) == [0.0]
+    assert dm_fit_scores([item], ave, float("nan")) == [0.0]
