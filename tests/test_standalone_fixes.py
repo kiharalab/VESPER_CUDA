@@ -167,3 +167,27 @@ def test_rounding_noise_is_no_spread():
     item = {"score": float(scores[0]), "ldp_recall": 0.0}
     assert dm_fit_scores([item], ave, std) == [0.0]
     assert dm_fit_scores([item], ave, float("nan")) == [0.0]
+
+
+@pytest.mark.parametrize(
+    ("extra", "message"),
+    [
+        (["-b", "gone.mrc"], "-b gone.mrc does not exist"),
+        (["-b", "model.pdb"], "-res is required when -b is a structure"),
+        (
+            ["-b", "target.mrc", "-ldp", "model.pdb"],
+            "-ldp and -ca must be given together",
+        ),
+        (
+            ["-b", "target.mrc", "-ldp", "gone.pdb", "-ca", "model.pdb"],
+            "gone.pdb does not exist (-ldp/-ca)",
+        ),
+    ],
+)
+def test_missing_input_files_are_usage_errors(inputs, monkeypatch, extra, message):
+    """Checked before the summary is printed, with exit code 2 instead of a traceback"""
+    monkeypatch.chdir(inputs)
+    result = CliRunner().invoke(app, ["orig", "-a", "a.mrc", *extra])
+    assert result.exit_code == 2
+    assert message in result.output
+    assert "Reference_Map_Path" not in result.output
