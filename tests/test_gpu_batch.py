@@ -154,6 +154,60 @@ def _probe(monkeypatch, n_angles, batch_size, num_streams=4):
 
 
 def test_probe_launches_no_more_than_the_search_would(monkeypatch):
-    assert _probe(monkeypatch, 100, 64) == [64, 64]  # 2 batches, so 2 streams
+    assert _probe(monkeypatch, 100, 64) == [64, 36]  # 2 batches, the last the remainder
     assert _probe(monkeypatch, 10, 64) == [10]  # one batch of all 10 rotations
     assert _probe(monkeypatch, 1000, 64) == [64] * 4
+
+
+def test_refinement_batches_are_capped_by_the_fitted_size(monkeypatch):
+    """fit() keeps the size the probe returned, even when it is not smaller, for refine()"""
+    from types import SimpleNamespace
+
+    import numpy as np
+
+    from vesper import fitter as fitter_module
+
+    monkeypatch.setattr(torch.cuda, "stream", lambda stream: contextlib.nullcontext())
+    launched = []
+
+    class Stream:
+        def synchronize(self):
+            pass
+
+    def rot_and_search(angles, return_data=False, stream=None, ref_ids=None):
+        if ref_ids is None:  # refinement does not pass ref_ids
+            launched.append(len(angles))
+        return [[(1.0, (0, 0, 0))] for _ in angles]
+
+    stub = SimpleNamespace(
+        gpu=True,
+        batch_size=None,
+        num_streams=2,
+        cuda_streams=[Stream(), Stream()],
+        ref_maps=[None],
+        angle_comb=[np.zeros(3, dtype=np.float32)],
+        ref_map=SimpleNamespace(new_data=np.zeros(1)),
+        ldp_recall_mode=False,
+        topn=1,
+        _get_optimal_batch_size=lambda: 64,
+        _fit_batch_size=lambda batch_size, ref_ids: batch_size,  # fits, not halved
+        _add_search_results=lambda *args: None,
+        _rot_and_search_fft_batch=rot_and_search,
+        _convert_trans=lambda angle, trans: trans,
+    )
+
+    def finish():  # one coarse pose to refine; fit() reads final_list afterwards
+        stub.result_list = [
+            {
+                "angle": np.zeros(3, dtype=np.float32),
+                "score": 1.0,
+                "vox_trans": (0, 0, 0),
+            }
+        ]
+        fitter_module.MapFitter.refine(stub, 2, 1)
+        stub.final_list = []
+
+    stub._finish_selected_map = finish
+    fitter_module.MapFitter.fit(stub)
+    assert stub.batch_size == 64
+    assert launched == [64, 64, 64, 24]  # 216 refinement rotations, never one batch

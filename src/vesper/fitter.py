@@ -386,15 +386,18 @@ class MapFitter:
 
         def try_batch(n):
             try:
-                # no more than the search itself runs: batches of n over the angles
-                angles = self.angle_comb[:n]
-                rounds = -(-len(self.angle_comb) // n)
-                for stream in self.cuda_streams[:rounds]:
+                # the search's first round: batches of n over the angles, the last the remainder
+                batches = [
+                    self.angle_comb[i : i + n]
+                    for i in range(0, len(self.angle_comb), n)
+                ][: len(self.cuda_streams)]
+                streams = self.cuda_streams[: len(batches)]
+                for stream, angles in zip(streams, batches):
                     with torch.cuda.stream(stream):
                         self._rot_and_search_fft_batch(
                             angles, stream=stream, ref_ids=ref_ids
                         )
-                for stream in self.cuda_streams[:rounds]:
+                for stream in streams:
                     stream.synchronize()
             finally:
                 gc.collect()
@@ -673,9 +676,7 @@ class MapFitter:
                 print(f"Using override batch size: {batch_size}")
             else:
                 batch_size = self._get_optimal_batch_size()
-            fitted = self._fit_batch_size(batch_size, ref_ids)
-            if fitted < batch_size:
-                self.batch_size = batch_size = fitted  # refinement batches by it too
+            self.batch_size = batch_size = self._fit_batch_size(batch_size, ref_ids)
 
             # Single-threaded batch processing with CUDA streams for overlap
             import torch
