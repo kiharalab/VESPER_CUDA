@@ -1,0 +1,63 @@
+Using FFTW3 for CPU.
+### Command ###
+
+### Input Params Summary ###
+Reference_Map_Path: <DIR>/a.mrc
+Target_Map_Path: <DIR>/target.mrc
+Threshold_of_Reference_Map: 0.05
+Threshold_of_Target_Map: 0.05
+Bandwidth_of_the_Gaussian_filter: 8.0
+Search_voxel_spacing: 3.0
+Search_angle_spacing: 30.0
+Refine_Top: 3 models
+Remove_duplicates: False
+Scoring_mode: C
+Show_topN_models_in_PDB_format: False
+Number_of_threads_to_use: 2
+Output_folder: <DIR>/out
+Transform_PDB_file: <DIR>/model.pdb
+Transform PDB file: <DIR>/model.pdb
+LDP Recall Reranking Disabled
+
+#dmax=6.689544080129826
+Nvox= 18, 18, 18
+cent= 42.0, 26.0, 36.0
+ori= 15.0, -1.0, 9.0
+
+#dmax=5.522680508593631
+Nvox= 14, 14, 14
+cent= 124.0, 74.0, 4.0
+ori= 103.0, 53.0, -17.0
+
+###Processing Reference Map Resampling###
+#maxd= 8.0
+#fsiv= 0.25
+#MAP SUM=1329.351318359375 COUNT=355 AVE=3.7446515560150146 STD=83.2784652709961 STD_norm=44.24189376831055
+
+###Processing Target Map Resampling###
+#maxd= 8.0
+#fsiv= 0.25
+#MAP SUM=917.940673828125 COUNT=232 AVE=3.9566407203674316 STD=70.9131088256836 STD_norm=37.372554779052734
+
+###Initializing fitter###
+Pre-computing rotation matrices...
+Cached 816 rotation matrices
+###Start Searching###
+###Preliminary Results Summary###
+Score Mean: 0.35525891184806824, StDev: 0.05458591878414154
+
+###Start Refining###
+###Final Results###
+Score Mean: 0.6393957138061523, StDev: 0.03005928546190262
+
+#0 Rotation= (270.0 270.0 0.0) Translation= (-29.000 22.000 -91.000)
+Score= 0.681207
+Voxel Trans= (np.int64(17), np.int64(0), np.int64(1)), Normalized Score= 5.971287
+
+#1 Rotation= (65.0 115.0 29.0) Translation= (46.736 3.013 180.440)
+Score= 0.625138
+Voxel Trans= (np.int64(0), np.int64(16), np.int64(17)), Normalized Score= 4.944113
+
+#2 Rotation= (89.0 115.0 55.0) Translation= (31.342 21.499 182.681)
+Score= 0.611842
+Voxel Trans= (np.int64(0), np.int64(16), np.int64(17)), Normalized Score= 4.700538

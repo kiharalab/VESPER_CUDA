@@ -33,6 +33,95 @@ def print_command_summary(**kwargs) -> None:
             print(f"{key}: {value}")
 
 
+def validate_ref_args(
+    maps: str,
+    labels: str | None = None,
+    ldp: str | None = None,
+    ca: str | None = None,
+    direct_fit: bool = False,
+) -> tuple[list[str], list[str] | None, list[str] | None]:
+    """Split -a, -labels and -ldp on commas and check that they go together
+
+    Several -a maps need one label each: a label names its map's output folder, so it must
+    stay inside -o and be unique. -ldp lists one file for every map or one per map, and
+    --direct_fit takes neither -ldp nor -ca. Returns the maps, labels and LDP files.
+    """
+    ref_paths = [s for s in maps.split(",") if s]
+    if len(ref_paths) == 0:
+        raise ValueError("Empty -a")
+    ref_labels = [s for s in labels.split(",") if s] if labels else None
+    if len(ref_paths) >= 2:
+        if not labels:
+            raise ValueError("-labels required when -a has multiple paths")
+        if len(ref_labels) != len(ref_paths):
+            raise ValueError(
+                f"-labels has {len(ref_labels)} entries but -a has {len(ref_paths)} refs"
+            )
+    if labels:
+        bad = [s for s in ref_labels if "/" in s or ".." in s or s == "."]
+        if bad:
+            raise ValueError(f"-labels must not contain '/' or '..', or be '.': {bad}")
+        if len(set(ref_labels)) != len(ref_labels):
+            raise ValueError(f"-labels must be unique; got {ref_labels}")
+    if direct_fit and (ldp or ca):
+        raise ValueError("-ldp/-ca incompatible with --direct_fit")
+    ldp_paths = [s for s in ldp.split(",") if s] if ldp else None
+    if ldp and len(ldp_paths) not in (1, len(ref_paths)):
+        raise ValueError(
+            f"-ldp must have 1 entry or {len(ref_paths)} entries; got {len(ldp_paths)}"
+        )
+    return ref_paths, ref_labels, ldp_paths
+
+
+def remove_old_score_pkl(
+    output_dir: str | None, pdbin: str | None, map1: str, labels: str | None
+) -> None:
+    """Remove an earlier run's score.pkl, which would read as "fit done" if this run dies
+
+    Only a run with -o and -pdbin writes score.pkl. This runs before the argument checks,
+    so it skips label lists that are not a safe one-to-one match with the maps.
+    """
+    if output_dir is None or pdbin is None:
+        return
+    n_maps = len(map1.split(","))
+    names = [""] if n_maps == 1 else (labels or "").split(",")
+    unsafe = n_maps > 1 and any(s in ("", ".") or "/" in s or ".." in s for s in names)
+    if len(names) != n_maps or unsafe:
+        return
+    for name in names:
+        for file in ("score.pkl", "score.pkl.tmp"):
+            path = os.path.join(output_dir, name, file)
+            if os.path.exists(path):
+                os.remove(path)
+
+
+def check_ref_paths_exist(ref_paths: list[str]) -> None:
+    """Exit with code 1, naming every -a map that is missing"""
+    missing = [p for p in ref_paths if not os.path.exists(p)]
+    for p in missing:
+        print(f"[ERROR] ref map missing or unreadable: {p}", file=sys.stderr)
+    if missing:
+        raise typer.Exit(code=1)
+
+
+def check_ref_grids(ref_maps: list[EMmap], voxel_spacing: float) -> None:
+    """Several maps are searched together only if they sit on one grid: same voxel size
+    and box centre (within half a search voxel)"""
+    ref0 = ref_maps[0]
+    for i, ref_map in enumerate(ref_maps[1:], start=1):
+        if not np.allclose(ref_map.new_cent, ref0.new_cent, atol=0.5 * voxel_spacing):
+            raise ValueError(
+                f"ref {i} is centred differently from ref 0 by more than half a search "
+                f"voxel ({ref_map.new_cent} vs {ref0.new_cent}): multiple -a maps must "
+                "share one grid"
+            )
+        if ref_map.xwidth != ref0.xwidth:
+            raise ValueError(
+                f"ref {i} has voxel size {ref_map.xwidth} but ref 0 has {ref0.xwidth}: "
+                "multiple -a maps must share one grid"
+            )
+
+
 def setup_gpu(gpu_id: int | None) -> tuple[bool, object | None]:
     """Setup GPU device"""
     device = None
@@ -57,8 +146,18 @@ def setup_gpu(gpu_id: int | None) -> tuple[bool, object | None]:
 
 @app.command("orig")
 def orig_command(
-    map1: str = typer.Option(..., "-a", help="MAP1.mrc (large)"),
+    map1: str = typer.Option(
+        ...,
+        "-a",
+        help="MAP1.mrc (large); several maps on one grid as a comma-separated list",
+    ),
     map2: str = typer.Option(..., "-b", help="MAP2.mrc (small)"),
+    labels: str | None = typer.Option(
+        None,
+        "-labels",
+        help="Comma-separated label of each -a map, required with several maps; "
+        "each map's outputs go to <-o>/<label>",
+    ),
     threshold_map1: float = typer.Option(0.0, "-t", help="Threshold of density map1"),
     threshold_map2: float = typer.Option(0.0, "-T", help="Threshold of density map2"),
     gaussian_bandwidth: float = typer.Option(
@@ -96,7 +195,10 @@ def orig_command(
         False, "-nodup", help="Remove duplicate models using heuristics def=false"
     ),
     ldp_file: str | None = typer.Option(
-        None, "-ldp", help="Path to the local dense point file def=None"
+        None,
+        "-ldp",
+        help="Path to the local dense point file def=None; with several -a maps, "
+        "one file for all or a comma-separated file per map",
     ),
     ca_file: str | None = typer.Option(
         None, "-ca", help="Path to the CA file def=None"
@@ -124,10 +226,21 @@ def orig_command(
     batch_size: int | None = typer.Option(
         None, "-batch", help="Override batch size for GPU processing def=auto-detect"
     ),
+    direct_fit: bool = typer.Option(
+        False,
+        "--direct_fit",
+        help="DiffModeler's direct fit: no LDP reranking, so -ldp and -ca are refused",
+    ),
 ) -> None:
     """Original VESPER command"""
     import random
     import string
+
+    remove_old_score_pkl(output_dir, pdbin, map1, labels)
+    ref_paths, ref_labels, ldp_paths = validate_ref_args(
+        map1, labels, ldp_file, ca_file, direct_fit
+    )
+    check_ref_paths_exist(ref_paths)
 
     mode_val = mode.value if isinstance(mode, Mode) else mode
 
@@ -154,7 +267,6 @@ def orig_command(
         )
         map2 = sim_map_path
 
-    assert os.path.exists(map1), "Reference map not found, please check -a option"
     assert os.path.exists(map2), "Target map not found, please check -b option"
 
     # Setup GPU
@@ -162,7 +274,13 @@ def orig_command(
 
     # Print summary
     print_command_summary(
-        Reference_Map_Path=os.path.abspath(map1),
+        Reference_Map_Path=os.path.abspath(ref_paths[0])
+        if len(ref_paths) == 1
+        else None,
+        Reference_Map_Paths=",".join(os.path.abspath(p) for p in ref_paths)
+        if len(ref_paths) > 1
+        else None,
+        Reference_Map_Labels=",".join(ref_labels) if ref_labels else None,
         Target_Map_Path=os.path.abspath(map2),
         Threshold_of_Reference_Map=threshold_map1,
         Threshold_of_Target_Map=threshold_map2,
@@ -180,15 +298,18 @@ def orig_command(
         if pdbin and os.path.exists(pdbin)
         else None,
         LDP_Recall_Reranking=(ldp_file and ca_file),
-        LDP_PDB_file=os.path.abspath(ldp_file) if ldp_file else None,
+        LDP_PDB_file=",".join(os.path.abspath(p) for p in ldp_paths)
+        if ldp_paths
+        else None,
         Backbone_PDB_file=os.path.abspath(ca_file) if ca_file else None,
         Angle_limit_for_searching=angle_limit,
+        Direct_fit=True if direct_fit else None,
     )
 
     if ldp_file or ca_file:
         assert ldp_file and ca_file, "Please specify both -ldp and -ca options"
-    if ldp_file:
-        assert os.path.exists(ldp_file), "LDP file not found, please check -ldp option"
+    for ldp_path in ldp_paths or []:
+        assert os.path.exists(ldp_path), "LDP file not found, please check -ldp option"
     if ca_file:
         assert os.path.exists(ca_file), "CA file not found, please check -ca option"
 
@@ -198,7 +319,12 @@ def orig_command(
     else:
         print(f"Transform PDB file: {os.path.abspath(pdbin)}")
 
-    if ldp_file and ca_file and os.path.exists(ldp_file) and os.path.exists(ca_file):
+    if (
+        ldp_paths
+        and ca_file
+        and all(os.path.exists(p) for p in ldp_paths)
+        and os.path.exists(ca_file)
+    ):
         print("LDP Recall Reranking Enabled")
     else:
         print("LDP Recall Reranking Disabled")
@@ -206,19 +332,24 @@ def orig_command(
     start_time = time.time()
 
     # construct mrc objects
-    ref_map = EMmap(map1)
+    ref_maps = [EMmap(path) for path in ref_paths]
     tgt_map = EMmap(map2)
 
     # set voxel size
-    ref_map.set_vox_size(thr=threshold_map1, voxel_size=voxel_spacing)
+    for ref_map in ref_maps:
+        ref_map.set_vox_size(thr=threshold_map1, voxel_size=voxel_spacing)
     tgt_map.set_vox_size(thr=threshold_map2, voxel_size=voxel_spacing)
 
-    # unify dimensions
-    unify_dims([ref_map, tgt_map], voxel_size=voxel_spacing)
+    # unify dimensions: all maps and the target share one search grid
+    unify_dims([*ref_maps, tgt_map], voxel_size=voxel_spacing)
+    if len(ref_maps) > 1:
+        check_ref_grids(ref_maps, voxel_spacing)
 
     # resample the maps using mean-shift with Gaussian kernel and calculate the vector representation
-    print("\n###Processing Reference Map Resampling###")
-    ref_map.resample_and_vec(dreso=gaussian_bandwidth)
+    for i, ref_map in enumerate(ref_maps):
+        name = f" ({ref_labels[i]})" if len(ref_maps) > 1 else ""
+        print(f"\n###Processing Reference Map Resampling{name}###")
+        ref_map.resample_and_vec(dreso=gaussian_bandwidth)
     print("\n###Processing Target Map Resampling###")
     tgt_map.resample_and_vec(dreso=gaussian_bandwidth)
     print()
@@ -227,12 +358,12 @@ def orig_command(
     print(f"Resample time: {end_resample - start_time:.2f} s")
 
     fitter = MapFitter(
-        ref_map,
+        ref_maps,
         tgt_map,
         angle_spacing,
         mode_val,
         remove_duplicates,
-        ldp_file,
+        ldp_paths,
         ca_file,
         pdbin,
         num_threads,
@@ -245,6 +376,7 @@ def orig_command(
         confine_angles=angle_limit,
         save_vec=save_models,
         batch_size=batch_size,
+        ref_labels=ref_labels,
     )
     fitter.fit()
 
