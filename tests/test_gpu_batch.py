@@ -143,13 +143,16 @@ def _probe(monkeypatch, n_angles, batch_size, num_streams=4):
             pass
 
     stub = SimpleNamespace(
-        angle_comb=list(range(n_angles)),
         cuda_streams=[Stream() for _ in range(num_streams)],
         _rot_and_search_fft_batch=lambda angles, stream, ref_ids: launched.append(
             len(angles)
         ),
     )
-    assert fitter_module.MapFitter._fit_batch_size(stub, batch_size, [0]) == batch_size
+    angles = list(range(n_angles))
+    assert (
+        fitter_module.MapFitter._fit_batch_size(stub, batch_size, [0], angles)
+        == batch_size
+    )
     return launched
 
 
@@ -190,7 +193,7 @@ def test_refinement_batches_are_capped_by_the_fitted_size(monkeypatch):
         ldp_recall_mode=False,
         topn=1,
         _get_optimal_batch_size=lambda: 64,
-        _fit_batch_size=lambda batch_size, ref_ids: batch_size,  # fits, not halved
+        _fit_batch_size=lambda batch_size, ref_ids, angles: batch_size,  # fits
         _add_search_results=lambda *args: None,
         _rot_and_search_fft_batch=rot_and_search,
         _convert_trans=lambda angle, trans: trans,
@@ -212,3 +215,65 @@ def test_refinement_batches_are_capped_by_the_fitted_size(monkeypatch):
     fitter_module.MapFitter.fit(stub)
     assert stub.batch_size == 64
     assert launched == [64, 64, 64, 24]  # 216 refinement rotations, never one batch
+
+
+def test_refinement_probes_its_own_batch_size(monkeypatch, capsys):
+    """A search of one rotation (-al 0) fits any batch; refinement then halves its own"""
+    import types
+    from types import SimpleNamespace
+
+    import numpy as np
+
+    from vesper import fitter as fitter_module
+
+    monkeypatch.setattr(torch.cuda, "stream", lambda stream: contextlib.nullcontext())
+    monkeypatch.setattr(torch.cuda, "empty_cache", lambda: None)
+    launched = []
+
+    class Stream:
+        def synchronize(self):
+            pass
+
+    def rot_and_search(angles, return_data=False, stream=None, ref_ids=None):
+        if len(angles) > 32:  # memory for 32 rotations at most
+            raise torch.cuda.OutOfMemoryError("CUDA out of memory")
+        if ref_ids is None:  # refinement does not pass ref_ids
+            launched.append(len(angles))
+        return [[(1.0, (0, 0, 0))] for _ in angles]
+
+    stub = SimpleNamespace(
+        gpu=True,
+        batch_size=256,  # -batch 256
+        num_streams=2,
+        cuda_streams=[Stream(), Stream()],
+        ref_maps=[None],
+        angle_comb=[np.zeros(3, dtype=np.float32)],
+        ref_map=SimpleNamespace(new_data=np.zeros(1)),
+        ldp_recall_mode=False,
+        _add_search_results=lambda *args: None,
+        _rot_and_search_fft_batch=rot_and_search,
+        _convert_trans=lambda angle, trans: trans,
+    )
+    stub._fit_batch_size = types.MethodType(
+        fitter_module.MapFitter._fit_batch_size, stub
+    )
+
+    def finish():  # one coarse pose to refine
+        stub.result_list = [
+            {
+                "angle": np.zeros(3, dtype=np.float32),
+                "score": 1.0,
+                "vox_trans": (0, 0, 0),
+            }
+        ]
+        fitter_module.MapFitter.refine(stub, 2, 1)
+        stub.final_list = []
+
+    stub._finish_selected_map = finish
+    fitter_module.MapFitter.fit(stub)
+    assert stub.batch_size == 256  # the search's one rotation fits
+    assert (
+        "GPU out of memory at batch 216: retrying with 108" in capsys.readouterr().out
+    )
+    assert sum(launched) == 216 + 2 * 27  # the probe's round, then every angle
+    assert max(launched) == 27
