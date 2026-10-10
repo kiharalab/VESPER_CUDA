@@ -37,6 +37,33 @@ def dm_fit_scores(top_items, score_ave, score_std):
     return [float(f"{v:.6f}") * 100 for v in values]
 
 
+def is_cuda_oom(error):
+    """True for a CUDA out-of-memory error, also as cuFFT reports it (a plain RuntimeError)"""
+    if isinstance(error, torch.cuda.OutOfMemoryError):
+        return True
+    text = str(error)
+    return "out of memory" in text or "CUFFT_ALLOC_FAILED" in text
+
+
+def auto_batch_size(free_bytes, per_rotation, fixed, streams):
+    """Rotations per batch: 70% of the free memory, shared by the streams, capped at 256"""
+    budget = 0.7 * free_bytes / streams - fixed
+    return max(1, min(int(budget // per_rotation), 256))
+
+
+def fit_batch_size(batch_size, try_batch):
+    """Halve batch_size down to 1 until try_batch(batch_size) allocates without running out"""
+    while True:
+        try:
+            try_batch(batch_size)
+            return batch_size
+        except (torch.cuda.OutOfMemoryError, RuntimeError) as error:
+            if not is_cuda_oom(error) or batch_size == 1:
+                raise
+        failed, batch_size = batch_size, batch_size // 2
+        print(f"GPU out of memory at batch {failed}: retrying with {batch_size}")
+
+
 class MapFitter:
     """Fits the target map into one reference map, or into several at once.
 
@@ -341,33 +368,53 @@ class MapFitter:
         return self.rotation_matrices[ang_key]
 
     def _get_optimal_batch_size(self):
-        """Determine optimal batch size based on GPU memory"""
+        """Batch size from the GPU memory free now, i.e. after every map's FFTs are resident"""
         if not self.gpu:
             return 1
 
         import torch
 
-        # Get GPU memory in GB
-        total_memory = torch.cuda.get_device_properties(self.device).total_memory / (
-            1024**3
+        free_bytes, total_bytes = torch.cuda.mem_get_info(self.device)
+        voxels = self.tgt_map.new_data.shape[0] ** 3
+        n_channels = len(self.ref_map_fft_lists_gpu[0])
+        batch = auto_batch_size(
+            free_bytes,
+            per_rotation=voxels * 4 * 5,  # data, vec, old_pos, new_data, temp
+            fixed=voxels * 20 * n_channels,  # complex128 products and their inverses
+            streams=self.num_streams,
         )
+        print(
+            f"GPU Memory: {free_bytes / 1024**3:.1f}GB free of "
+            f"{total_bytes / 1024**3:.1f}GB, Optimal batch size: {batch}"
+        )
+        return batch
 
-        # Estimate memory per rotation (data + vec + intermediate buffers)
-        # Assuming ~100MB per rotation for typical map sizes
-        dim = self.tgt_map.new_data.shape[0]
-        memory_per_rotation_gb = (dim**3 * 4 * 5) / (
-            1024**3
-        )  # 5 arrays: data, vec, old_pos, new_data, temp
+    def _fit_batch_size(self, batch_size, ref_ids):
+        """Halve batch_size until one round (a batch on every stream) fits in GPU memory"""
+        import gc
 
-        # Use 70% of GPU memory for batching, rest for FFT operations
-        available_memory = total_memory * 0.7
-        optimal_batch = int(available_memory / memory_per_rotation_gb)
+        import torch
 
-        # Clamp between reasonable bounds
-        optimal_batch = max(8, min(optimal_batch, 256))
+        def try_batch(n):
+            try:
+                # the search's first round: batches of n over the angles, the last the remainder
+                batches = [
+                    self.angle_comb[i : i + n]
+                    for i in range(0, len(self.angle_comb), n)
+                ][: len(self.cuda_streams)]
+                streams = self.cuda_streams[: len(batches)]
+                for stream, angles in zip(streams, batches):
+                    with torch.cuda.stream(stream):
+                        self._rot_and_search_fft_batch(
+                            angles, stream=stream, ref_ids=ref_ids
+                        )
+                for stream in streams:
+                    stream.synchronize()
+            finally:
+                gc.collect()
+                torch.cuda.empty_cache()
 
-        print(f"GPU Memory: {total_memory:.1f}GB, Optimal batch size: {optimal_batch}")
-        return optimal_batch
+        return fit_batch_size(batch_size, try_batch)
 
     def _init_gpu_buffers(self):
         """Pre-allocate GPU buffers for memory reuse during rotation"""
@@ -640,6 +687,7 @@ class MapFitter:
                 print(f"Using override batch size: {batch_size}")
             else:
                 batch_size = self._get_optimal_batch_size()
+            self.batch_size = batch_size = self._fit_batch_size(batch_size, ref_ids)
 
             # Single-threaded batch processing with CUDA streams for overlap
             import torch
