@@ -617,6 +617,13 @@ class MapFitter:
         """
         print("###Start Searching###")
         ref_ids = range(len(self.ref_maps))
+        # a score.pkl of an earlier run into these folders would read as "fit done"
+        if self.outdir is not None:
+            for label in [None] if len(self.ref_maps) == 1 else self.ref_labels:
+                for name in ("score.pkl", "score.pkl.tmp"):
+                    path = os.path.join(self.outdir, label or "", name)
+                    if os.path.exists(path):
+                        os.remove(path)
         # one result list per map
         search_lists = [[] for _ in ref_ids]
 
