@@ -194,6 +194,7 @@ def test_refinement_batches_are_capped_by_the_fitted_size(monkeypatch):
         _add_search_results=lambda *args: None,
         _rot_and_search_fft_batch=rot_and_search,
         _convert_trans=lambda angle, trans: trans,
+        _refine_angles=fitter_module.MapFitter._refine_angles,
     )
 
     def finish():  # one coarse pose to refine; fit() reads final_list afterwards
