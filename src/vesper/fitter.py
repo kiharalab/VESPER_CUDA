@@ -1098,24 +1098,30 @@ class MapFitter:
 
         # a pose is a duplicate of a better one at most 30 degrees away in rotation
         # (the angle between the two rotations) and close in translation
+        if not self.result_list:
+            return
         quats = R.from_euler(
             "xyz", [r["angle"] for r in self.result_list], degrees=True
         ).as_quat()
         trans = np.array([r["vox_trans"] for r in self.result_list])
-        kept = []
+        kept = np.empty(len(quats), dtype=int)
+        kept_quats = np.empty_like(quats)
+        n_kept = 0
         for i in tqdm(range(len(quats)), desc="Removing Duplicates"):
             theta = np.degrees(
-                2 * np.arccos(np.clip(np.abs(quats[kept] @ quats[i]), 0, 1))
+                2 * np.arccos(np.clip(np.abs(kept_quats[:n_kept] @ quats[i]), 0, 1))
             )
-            near = np.array(kept, dtype=int)[theta <= 30 + 1e-6]
+            near = kept[:n_kept][theta <= 30 + 1e-6]
             # manhattan distance
             if np.any(
                 np.abs(trans[near] - trans[i]).sum(axis=-1) < self.tgt_map.new_dim
             ):
                 continue
-            kept.append(i)
+            kept[n_kept] = i
+            kept_quats[n_kept] = quats[i]
+            n_kept += 1
 
-        self.result_list = [self.result_list[i] for i in kept]
+        self.result_list = [self.result_list[i] for i in kept[:n_kept]]
 
     @staticmethod
     def _print_result_stats(results, return_stats=False):

@@ -44,3 +44,8 @@ def test_a_pose_is_compared_with_every_kept_pose():
     a, b = ((60, 40, 30), (5, 5, 5)), ((70, 40, 30), (60, 5, 5))
     c = ((60, 40, 30), (5, 6, 5))  # a's rotation, near a's translation
     assert kept(a, b, c) == [a[0], b[0]]
+
+
+def test_empty_and_single_pose_lists():
+    assert kept() == []
+    assert kept(((60, 40, 30), (5, 5, 5))) == [(60, 40, 30)]
