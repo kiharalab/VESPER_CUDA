@@ -247,12 +247,8 @@ class MapFitter:
 
             # FFTW_MEASURE picks algorithms by timing them, so scores change run to run
             pyfftw.config.PLANNER_EFFORT = "FFTW_ESTIMATE"
-            allowed = (
-                len(os.sched_getaffinity(0))
-                if hasattr(os, "sched_getaffinity")
-                else os.cpu_count()
-            )
-            pyfftw.config.NUM_THREADS = max(min(self.threads, allowed), 1)
+            # -c threads already run rotations; FFTW threads on top oversubscribe the CPUs
+            pyfftw.config.NUM_THREADS = 1
 
     @property
     def ref_map(self):
