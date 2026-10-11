@@ -1,16 +1,19 @@
+import json
+import math
 import os
 import sys
 import tempfile
 import time
 from enum import Enum
 
+import click
 import numpy as np
 import typer
 
 from .data.map import EMmap, unify_dims
 from .fitter import MapFitter
 from .utils.pdb2vol import pdb2vol
-from .utils.utils import get_file_extension
+from .utils.utils import get_file_extension, get_score
 
 app = typer.Typer(help="VESPER - CUDA accelerated version")
 
@@ -48,26 +51,27 @@ def validate_ref_args(
     """
     ref_paths = [s for s in maps.split(",") if s]
     if len(ref_paths) == 0:
-        raise ValueError("Empty -a")
+        raise click.UsageError("Empty -a")
     ref_labels = [s for s in labels.split(",") if s] if labels else None
-    if len(ref_paths) >= 2:
-        if not labels:
-            raise ValueError("-labels required when -a has multiple paths")
-        if len(ref_labels) != len(ref_paths):
-            raise ValueError(
-                f"-labels has {len(ref_labels)} entries but -a has {len(ref_paths)} refs"
-            )
+    if len(ref_paths) >= 2 and not labels:
+        raise click.UsageError("-labels required when -a has multiple paths")
+    if labels and len(ref_labels) != len(ref_paths):
+        raise click.UsageError(
+            f"-labels has {len(ref_labels)} entries but -a has {len(ref_paths)} refs"
+        )
     if labels:
         bad = [s for s in ref_labels if "/" in s or ".." in s or s == "."]
         if bad:
-            raise ValueError(f"-labels must not contain '/' or '..', or be '.': {bad}")
+            raise click.UsageError(
+                f"-labels must not contain '/' or '..', or be '.': {bad}"
+            )
         if len(set(ref_labels)) != len(ref_labels):
-            raise ValueError(f"-labels must be unique; got {ref_labels}")
+            raise click.UsageError(f"-labels must be unique; got {ref_labels}")
     if direct_fit and (ldp or ca):
-        raise ValueError("-ldp/-ca incompatible with --direct_fit")
+        raise click.UsageError("-ldp/-ca incompatible with --direct_fit")
     ldp_paths = [s for s in ldp.split(",") if s] if ldp else None
     if ldp and len(ldp_paths) not in (1, len(ref_paths)):
-        raise ValueError(
+        raise click.UsageError(
             f"-ldp must have 1 entry or {len(ref_paths)} entries; got {len(ldp_paths)}"
         )
     return ref_paths, ref_labels, ldp_paths
@@ -96,6 +100,51 @@ def remove_old_score_pkl(
                 os.remove(path)
 
 
+def validate_search_args(
+    angle_spacing: float,
+    refine_top: int,
+    angle_limit: float | None,
+    batch_size: int | None,
+    pdbin: str | None,
+) -> None:
+    """Reject values that leave the search with nothing to do or nothing to write"""
+    if not math.isfinite(angle_spacing) or angle_spacing <= 0:
+        raise click.UsageError(
+            f"-A (angle spacing) must be finite and > 0; got {angle_spacing}"
+        )
+    if refine_top < 1:
+        raise click.UsageError(f"-N (models to refine) must be >= 1; got {refine_top}")
+    if batch_size is not None and batch_size < 1:
+        raise click.UsageError(f"-batch must be >= 1; got {batch_size}")
+    if angle_limit is not None and not (
+        math.isfinite(angle_limit) and angle_limit >= 0
+    ):
+        raise click.UsageError(
+            f"-al (angle limit) must be finite and >= 0; got {angle_limit}"
+        )
+    if pdbin and not os.path.exists(pdbin):
+        raise click.UsageError(f"-pdbin {pdbin} does not exist")
+
+
+def validate_input_files(
+    target: str,
+    resolution: float | None,
+    ldp_file: str | None,
+    ca_file: str | None,
+    ldp_paths: list[str] | None,
+) -> None:
+    """Reject a missing -b, -ldp or -ca file, or a structure -b without -res"""
+    if not os.path.exists(target):
+        raise click.UsageError(f"-b {target} does not exist")
+    if get_file_extension(target)[0] in ["pdb", "cif"] and resolution is None:
+        raise click.UsageError("-res is required when -b is a structure")
+    if bool(ldp_file) != bool(ca_file):
+        raise click.UsageError("-ldp and -ca must be given together")
+    for path in [*(ldp_paths or []), *([ca_file] if ca_file else [])]:
+        if not os.path.exists(path):
+            raise click.UsageError(f"{path} does not exist (-ldp/-ca)")
+
+
 def check_ref_paths_exist(ref_paths: list[str]) -> None:
     """Exit with code 1, naming every -a map that is missing"""
     missing = [p for p in ref_paths if not os.path.exists(p)]
@@ -111,16 +160,64 @@ def check_ref_grids(ref_maps: list[EMmap], voxel_spacing: float) -> None:
     ref0 = ref_maps[0]
     for i, ref_map in enumerate(ref_maps[1:], start=1):
         if not np.allclose(ref_map.new_cent, ref0.new_cent, atol=0.5 * voxel_spacing):
-            raise ValueError(
+            raise click.UsageError(
                 f"ref {i} is centred differently from ref 0 by more than half a search "
                 f"voxel ({ref_map.new_cent} vs {ref0.new_cent}): multiple -a maps must "
                 "share one grid"
             )
         if ref_map.xwidth != ref0.xwidth:
-            raise ValueError(
+            raise click.UsageError(
                 f"ref {i} has voxel size {ref_map.xwidth} but ref 0 has {ref0.xwidth}: "
                 "multiple -a maps must share one grid"
             )
+
+
+def evaluate_current_position(
+    ref_maps: list[EMmap],
+    ref_labels: list[str] | None,
+    ref_paths: list[str],
+    tgt_map: EMmap,
+    tgt_path: str,
+    output_dir: str | None,
+) -> None:
+    """Score the target where it sits (no search) and print the scores
+
+    The target must already be resampled on the grid of the reference maps.
+
+    With -o, each map's scores and the two input paths go to eval.json (in
+    <-o>/<label> when there are several maps).
+    """
+    print("### Evaluation Mode ###")
+    for i, ref_map in enumerate(ref_maps):
+        _, overlap, cc, pcc, n, total, dot = get_score(
+            ref_map, tgt_map.new_data, tgt_map.vec, np.array((0, 0, 0))
+        )
+        if len(ref_maps) > 1:
+            print(f"Reference Map {ref_labels[i]}:")
+        print(
+            "Overlap: ", overlap, "CC: ", cc, "PCC: ", pcc, "N: ", n, "Total: ", total,
+            "Dot: ", dot,
+        )  # fmt: skip
+        if output_dir:
+            folder = output_dir
+            if len(ref_maps) > 1:
+                folder = os.path.join(output_dir, ref_labels[i])
+            os.makedirs(folder, exist_ok=True)
+            scores = {
+                "overlap": overlap,
+                "cc": cc,
+                "pcc": pcc,
+                "n": n,
+                "total": total,
+                "dot": dot,
+            }
+            record = {
+                **{k: float(v) for k, v in scores.items()},
+                "ref": os.path.abspath(ref_paths[i]),
+                "target": os.path.abspath(tgt_path),
+            }
+            with open(os.path.join(folder, "eval.json"), "w") as f:
+                json.dump(record, f, indent=2)
 
 
 def setup_gpu(gpu_id: int | None) -> tuple[bool, object | None]:
@@ -176,6 +273,14 @@ def orig_command(
     save_models: bool = typer.Option(
         False, "-S", help="Show topN models in PDB format def=false"
     ),
+    refine_step: int = typer.Option(
+        2,
+        "-R",
+        min=1,
+        max=2,
+        help="Refinement step in degrees, 1 or 2 def=2; each Euler angle is tried "
+        "within +-5 degrees of the coarse pose (2: 216 poses, 1: 1331 poses)",
+    ),
     mode: Mode = typer.Option(
         Mode.VEC_PRODUCT,
         "-M",
@@ -186,9 +291,20 @@ def orig_command(
         "L: Laplacian Filtering Mode",
     ),
     eval_mode: bool = typer.Option(
-        False, "-E", help="Evaluation mode of the current position def=false"
+        False,
+        "-E",
+        help="Evaluation mode: score -b at its current position without searching, "
+        "print Overlap/CC/PCC/N/Total/Dot and exit; with -o also write eval.json "
+        "def=false",
     ),
     output_dir: str | None = typer.Option(None, "-o", help="Output folder name"),
+    vector_dir: str | None = typer.Option(
+        None,
+        "-v",
+        help="Save the resampled vectors of both maps to this folder and exit: "
+        "ref_map_{coords,vecs}.npy and tgt_map_{coords,vecs}.npy (ref_<label>_... "
+        "for several -a maps) def=None",
+    ),
     gpu_id: int | None = typer.Option(
         None, "-gpu", help="GPU ID to use for CUDA acceleration def=0"
     ),
@@ -241,7 +357,9 @@ def orig_command(
     ref_paths, ref_labels, ldp_paths = validate_ref_args(
         map1, labels, ldp_file, ca_file, direct_fit
     )
+    validate_search_args(angle_spacing, refine_top, angle_limit, batch_size, pdbin)
     check_ref_paths_exist(ref_paths)
+    validate_input_files(map2, resolution, ldp_file, ca_file, ldp_paths)
 
     mode_val = mode.value if isinstance(mode, Mode) else mode
 
@@ -255,11 +373,9 @@ def orig_command(
     rand_str = "".join(random.choices(string.ascii_letters + string.digits, k=8))
 
     # check if the second input is a structure file
+    target_arg = map2
     ext, _ = get_file_extension(map2)
     if ext in ["pdb", "cif"]:
-        assert resolution is not None, (
-            "Please specify resolution when using structure as input."
-        )
         # simulate the map at target resolution
         sim_map_path = os.path.join(tempfile.gettempdir(), f"simu_map_{rand_str}.mrc")
         pdb2vol(map2, resolution, sim_map_path, backbone_only=backbone_only)
@@ -267,8 +383,6 @@ def orig_command(
             "Failed to create simulated map from structure."
         )
         map2 = sim_map_path
-
-    assert os.path.exists(map2), "Target map not found, please check -b option"
 
     # Setup GPU
     use_gpu, device = setup_gpu(gpu_id)
@@ -305,14 +419,8 @@ def orig_command(
         Backbone_PDB_file=os.path.abspath(ca_file) if ca_file else None,
         Angle_limit_for_searching=angle_limit,
         Direct_fit=True if direct_fit else None,
+        Refine_step=refine_step if refine_step != 2 else None,
     )
-
-    if ldp_file or ca_file:
-        assert ldp_file and ca_file, "Please specify both -ldp and -ca options"
-    for ldp_path in ldp_paths or []:
-        assert os.path.exists(ldp_path), "LDP file not found, please check -ldp option"
-    if ca_file:
-        assert os.path.exists(ca_file), "CA file not found, please check -ca option"
 
     if not pdbin or not os.path.exists(pdbin):
         print("No input PDB file, skipping transformation")
@@ -345,6 +453,9 @@ def orig_command(
     unify_dims([*ref_maps, tgt_map], voxel_size=voxel_spacing)
     if len(ref_maps) > 1:
         check_ref_grids(ref_maps, voxel_spacing)
+    if eval_mode:
+        # -E scores the target where it sits: resample it on the reference grid
+        tgt_map.new_cent, tgt_map.new_orig = ref_maps[0].new_cent, ref_maps[0].new_orig
 
     # resample the maps using mean-shift with Gaussian kernel and calculate the vector representation
     for i, ref_map in enumerate(ref_maps):
@@ -357,6 +468,21 @@ def orig_command(
 
     end_resample = time.time()
     print(f"Resample time: {end_resample - start_time:.2f} s")
+
+    if vector_dir:
+        os.makedirs(vector_dir, exist_ok=True)
+        for i, ref_map in enumerate(ref_maps):
+            name = f"ref_{ref_labels[i]}" if len(ref_maps) > 1 else "ref_map"
+            ref_map.save_vectors(os.path.join(vector_dir, name))
+        tgt_map.save_vectors(os.path.join(vector_dir, "tgt_map"))
+        if not eval_mode:
+            raise typer.Exit(code=0)
+
+    if eval_mode:
+        evaluate_current_position(
+            ref_maps, ref_labels, ref_paths, tgt_map, target_arg, output_dir
+        )
+        raise typer.Exit(code=0)
 
     fitter = MapFitter(
         ref_maps,
@@ -378,6 +504,7 @@ def orig_command(
         save_vec=save_models,
         batch_size=batch_size,
         ref_labels=ref_labels,
+        refine_step=refine_step,
     )
     fitter.fit()
 
