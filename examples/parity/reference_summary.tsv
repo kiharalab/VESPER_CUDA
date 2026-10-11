@@ -1,0 +1,882 @@
+batch_3	status	exit=0
+batch_3	score.pkl	#0_rx331_ry1_rz123_tx95.733_ty91.096_tz109.023.pdb	2606.3837
+batch_3	score.pkl	#1_rx181_ry355_rz359_tx95.072_ty93.175_tz99.982.pdb	283.7298
+batch_3	score.pkl	#2_rx1_ry185_rz179_tx95.072_ty93.175_tz99.982.pdb	283.7298
+batch_3	score.pkl	#3_rx179_ry237_rz357_tx95.473_ty93.187_tz104.953.pdb	271.4301
+batch_3	score.pkl	#4_rx359_ry329_rz359_tx83.419_ty90.022_tz86.973.pdb	230.4683
+batch_3	PDB/pose	#0_rx331_ry1_rz123_tx95.733_ty91.096_tz109.023.pdb
+batch_3	PDB/#0_rx331_ry1_rz123_tx95.733_ty91.096_tz109.023.pdb/occupancy	 26.06
+batch_3	PDB/pose	#1_rx181_ry355_rz359_tx95.072_ty93.175_tz99.982.pdb
+batch_3	PDB/#1_rx181_ry355_rz359_tx95.072_ty93.175_tz99.982.pdb/occupancy	  2.84
+batch_3	PDB/pose	#2_rx1_ry185_rz179_tx95.072_ty93.175_tz99.982.pdb
+batch_3	PDB/#2_rx1_ry185_rz179_tx95.072_ty93.175_tz99.982.pdb/occupancy	  2.84
+batch_3	PDB/pose	#3_rx179_ry237_rz357_tx95.473_ty93.187_tz104.953.pdb
+batch_3	PDB/#3_rx179_ry237_rz357_tx95.473_ty93.187_tz104.953.pdb/occupancy	  2.71
+batch_3	PDB/pose	#4_rx359_ry329_rz359_tx83.419_ty90.022_tz86.973.pdb
+batch_3	PDB/#4_rx359_ry329_rz359_tx83.419_ty90.022_tz86.973.pdb/occupancy	  2.30
+cpu	status	exit=0
+cpu	score.pkl	#0_rx331_ry3_rz125_tx93.762_ty89.085_tz109.040.pdb	1031.2081
+cpu	score.pkl	#1_rx145_ry295_rz149_tx86.294_ty93.301_tz113.414.pdb	524.6957
+cpu	score.pkl	#2_rx147_ry85_rz5_tx94.160_ty85.527_tz90.135.pdb	374.8124
+cpu	score.pkl	#3_rx177_ry121_rz145_tx89.307_ty94.297_tz113.781.pdb	359.0175
+cpu	score.pkl	#4_rx181_ry183_rz355_tx98.022_ty93.127_tz109.149.pdb	332.8627
+cpu	PDB/pose	#0_rx331_ry3_rz125_tx93.762_ty89.085_tz109.040.pdb
+cpu	PDB/#0_rx331_ry3_rz125_tx93.762_ty89.085_tz109.040.pdb/occupancy	 10.31
+cpu	PDB/pose	#1_rx145_ry295_rz149_tx86.294_ty93.301_tz113.414.pdb
+cpu	PDB/#1_rx145_ry295_rz149_tx86.294_ty93.301_tz113.414.pdb/occupancy	  5.25
+cpu	PDB/pose	#2_rx147_ry85_rz5_tx94.160_ty85.527_tz90.135.pdb
+cpu	PDB/#2_rx147_ry85_rz5_tx94.160_ty85.527_tz90.135.pdb/occupancy	  3.75
+cpu	PDB/pose	#3_rx177_ry121_rz145_tx89.307_ty94.297_tz113.781.pdb
+cpu	PDB/#3_rx177_ry121_rz145_tx89.307_ty94.297_tz113.781.pdb/occupancy	  3.59
+cpu	PDB/pose	#4_rx181_ry183_rz355_tx98.022_ty93.127_tz109.149.pdb
+cpu	PDB/#4_rx181_ry183_rz355_tx98.022_ty93.127_tz109.149.pdb/occupancy	  3.33
+diffmodeler	status	exit=0
+diffmodeler	full/score.pkl	#0_rx327_ry357_rz123_tx95.744_ty91.154_tz108.980.pdb	99.6063
+diffmodeler	full/score.pkl	#1_rx333_ry357_rz125_tx95.710_ty91.123_tz108.996.pdb	99.6063
+diffmodeler	full/score.pkl	#2_rx335_ry359_rz123_tx95.688_ty91.091_tz109.019.pdb	99.6063
+diffmodeler	full/score.pkl	#3_rx327_ry5_rz119_tx95.753_ty91.073_tz109.049.pdb	99.6063
+diffmodeler	full/score.pkl	#4_rx331_ry355_rz123_tx95.698_ty91.149_tz108.974.pdb	99.6063
+diffmodeler	full/score.pkl	#5_rx323_ry359_rz121_tx95.776_ty91.152_tz108.989.pdb	99.4094
+diffmodeler	full/score.pkl	#6_rx335_ry357_rz125_tx95.694_ty91.111_tz109.002.pdb	99.4094
+diffmodeler	full/score.pkl	#7_rx325_ry1_rz125_tx95.801_ty91.136_tz109.009.pdb	99.4094
+diffmodeler	full/score.pkl	#8_rx327_ry355_rz127_tx95.762_ty91.182_tz108.964.pdb	99.4094
+diffmodeler	full/score.pkl	#9_rx327_ry5_rz125_tx95.807_ty91.092_tz109.049.pdb	99.2126
+diffmodeler	full/score.pkl	#10_rx335_ry5_rz125_tx95.739_ty91.047_tz109.071.pdb	99.0157
+diffmodeler	full/score.pkl	#11_rx335_ry355_rz125_tx95.681_ty91.128_tz108.987.pdb	99.0157
+diffmodeler	full/score.pkl	#12_rx335_ry355_rz125_tx95.681_ty91.128_tz108.987.pdb	99.0157
+diffmodeler	full/score.pkl	#13_rx335_ry5_rz119_tx95.680_ty91.035_tz109.071.pdb	99.0157
+diffmodeler	full/score.pkl	#14_rx325_ry355_rz123_tx95.750_ty91.184_tz108.960.pdb	99.0157
+diffmodeler	full/score.pkl	#15_rx331_ry3_rz115_tx95.670_ty91.064_tz109.040.pdb	98.8189
+diffmodeler	full/score.pkl	#16_rx323_ry1_rz115_tx95.737_ty91.117_tz109.006.pdb	98.8189
+diffmodeler	full/score.pkl	#17_rx325_ry355_rz125_tx95.764_ty91.189_tz108.960.pdb	98.8189
+diffmodeler	full/score.pkl	#18_rx325_ry5_rz115_tx95.735_ty91.072_tz109.045.pdb	98.6220
+diffmodeler	full/score.pkl	#19_rx325_ry5_rz115_tx95.735_ty91.072_tz109.045.pdb	98.6220
+diffmodeler	full/score.pkl	#20_rx337_ry1_rz135_tx95.792_ty91.092_tz109.043.pdb	98.2283
+diffmodeler	full/score.pkl	#21_rx335_ry7_rz135_tx95.846_ty91.066_tz109.090.pdb	98.2283
+diffmodeler	full/score.pkl	#22_rx327_ry355_rz115_tx95.672_ty91.158_tz108.964.pdb	98.0315
+diffmodeler	full/score.pkl	#23_rx345_ry359_rz125_tx95.627_ty91.038_tz109.063.pdb	97.6378
+diffmodeler	full/score.pkl	#24_rx345_ry1_rz135_tx95.737_ty91.038_tz109.080.pdb	97.2441
+diffmodeler	full/score.pkl	#25_rx313_ry1_rz113_tx95.817_ty91.154_tz109.001.pdb	96.8504
+diffmodeler	full/score.pkl	#26_rx315_ry1_rz115_tx95.813_ty91.153_tz109.000.pdb	96.8504
+diffmodeler	full/score.pkl	#27_rx345_ry5_rz123_tx95.636_ty90.993_tz107.115.pdb	96.4567
+diffmodeler	full/score.pkl	#28_rx265_ry263_rz153_tx95.418_ty94.219_tz95.166.pdb	96.2598
+diffmodeler	full/score.pkl	#29_rx155_ry245_rz61_tx93.626_ty93.226_tz98.918.pdb	96.2598
+diffmodeler	full/score.pkl	#30_rx155_ry245_rz61_tx93.626_ty93.226_tz98.918.pdb	96.2598
+diffmodeler	full/score.pkl	#31_rx145_ry241_rz85_tx93.675_ty95.303_tz98.885.pdb	96.0630
+diffmodeler	full/score.pkl	#32_rx183_ry241_rz35_tx93.756_ty93.161_tz98.977.pdb	96.0630
+diffmodeler	full/score.pkl	#33_rx155_ry239_rz65_tx93.683_ty93.295_tz98.889.pdb	96.0630
+diffmodeler	full/score.pkl	#34_rx145_ry241_rz85_tx93.675_ty95.303_tz98.885.pdb	96.0630
+diffmodeler	full/score.pkl	#35_rx345_ry355_rz135_tx95.697_ty91.079_tz107.031.pdb	96.0630
+diffmodeler	full/score.pkl	#36_rx183_ry241_rz35_tx93.756_ty93.161_tz98.977.pdb	96.0630
+diffmodeler	full/score.pkl	#37_rx165_ry239_rz51_tx93.705_ty93.253_tz100.912.pdb	96.0630
+diffmodeler	full/score.pkl	#38_rx275_ry265_rz143_tx95.435_ty94.218_tz95.157.pdb	95.6693
+diffmodeler	full/score.pkl	#39_rx169_ry251_rz59_tx93.723_ty93.151_tz100.977.pdb	95.6693
+diffmodeler	full/score.pkl	#40_rx171_ry235_rz51_tx93.795_ty93.279_tz100.919.pdb	95.6693
+diffmodeler	full/score.pkl	#41_rx185_ry243_rz39_tx93.789_ty95.158_tz100.989.pdb	95.6693
+diffmodeler	full/score.pkl	#42_rx179_ry239_rz75_tx93.972_ty93.368_tz98.958.pdb	95.6693
+diffmodeler	full/score.pkl	#43_rx250_ry260_rz170_tx95.368_ty94.203_tz95.166.pdb	95.4724
+diffmodeler	full/score.pkl	#44_rx331_ry345_rz121_tx95.623_ty91.245_tz106.909.pdb	95.4724
+diffmodeler	full/score.pkl	#45_rx175_ry249_rz47_tx93.703_ty93.143_tz100.979.pdb	95.4724
+diffmodeler	full/score.pkl	#46_rx175_ry249_rz47_tx93.703_ty93.143_tz100.979.pdb	95.4724
+diffmodeler	full/score.pkl	#47_rx285_ry261_rz135_tx95.398_ty94.238_tz97.203.pdb	95.2756
+diffmodeler	full/score.pkl	#48_rx257_ry255_rz161_tx97.359_ty94.231_tz95.214.pdb	95.2756
+diffmodeler	full/score.pkl	#49_rx65_ry279_rz355_tx95.374_ty94.195_tz95.153.pdb	95.2756
+diffmodeler	full/score.pkl	#50_rx245_ry261_rz175_tx95.374_ty94.195_tz95.153.pdb	95.2756
+diffmodeler	full/score.pkl	#51_rx177_ry253_rz45_tx93.678_ty93.107_tz101.003.pdb	95.2756
+diffmodeler	full/score.pkl	#52_rx251_ry255_rz169_tx95.333_ty94.211_tz95.200.pdb	95.2756
+diffmodeler	full/score.pkl	#53_rx187_ry227_rz41_tx95.953_ty93.276_tz98.988.pdb	95.2756
+diffmodeler	full/score.pkl	#54_rx273_ry255_rz151_tx95.310_ty94.230_tz95.248.pdb	95.0787
+diffmodeler	full/score.pkl	#55_rx167_ry227_rz57_tx95.841_ty91.386_tz100.892.pdb	95.0787
+diffmodeler	full/score.pkl	#56_rx119_ry45_rz31_tx95.571_ty89.783_tz102.355.pdb	95.0787
+diffmodeler	full/score.pkl	#57_rx173_ry223_rz51_tx95.904_ty91.387_tz100.917.pdb	95.0787
+diffmodeler	full/score.pkl	#58_rx163_ry235_rz55_tx93.737_ty93.305_tz100.894.pdb	94.8819
+diffmodeler	full/score.pkl	#59_rx189_ry219_rz47_tx96.060_ty93.376_tz101.014.pdb	94.8819
+diffmodeler	full/score.pkl	#60_rx9_ry121_rz139_tx93.324_ty95.191_tz100.202.pdb	94.8819
+diffmodeler	full/score.pkl	#61_rx53_ry281_rz3_tx95.398_ty94.193_tz95.139.pdb	94.8819
+diffmodeler	full/score.pkl	#62_rx233_ry257_rz179_tx95.423_ty94.206_tz95.146.pdb	94.8819
+diffmodeler	full/score.pkl	#63_rx345_ry117_rz125_tx95.498_ty95.222_tz98.272.pdb	94.8819
+diffmodeler	full/score.pkl	#64_rx191_ry245_rz33_tx93.784_ty93.121_tz101.015.pdb	94.8819
+diffmodeler	full/score.pkl	#65_rx295_ry263_rz123_tx95.438_ty94.240_tz97.188.pdb	94.8819
+diffmodeler	full/score.pkl	#66_rx169_ry239_rz75_tx91.877_ty93.335_tz100.923.pdb	94.8819
+diffmodeler	full/score.pkl	#67_rx85_ry73_rz3_tx95.804_ty92.080_tz106.177.pdb	94.8819
+diffmodeler	full/score.pkl	#68_rx151_ry217_rz79_tx95.767_ty93.603_tz102.840.pdb	94.8819
+diffmodeler	full/score.pkl	#69_rx187_ry231_rz33_tx95.869_ty93.207_tz100.985.pdb	94.6850
+diffmodeler	full/score.pkl	#70_rx129_ry237_rz91_tx95.536_ty93.356_tz98.864.pdb	94.6850
+diffmodeler	full/score.pkl	#71_rx43_ry279_rz7_tx93.476_ty94.197_tz95.117.pdb	94.6850
+diffmodeler	full/score.pkl	#72_rx101_ry77_rz23_tx95.815_ty92.065_tz106.185.pdb	94.6850
+diffmodeler	full/score.pkl	#73_rx113_ry49_rz25_tx95.598_ty89.855_tz102.335.pdb	94.6850
+diffmodeler	full/score.pkl	#74_rx153_ry221_rz69_tx93.766_ty93.521_tz100.844.pdb	94.6850
+diffmodeler	full/score.pkl	#75_rx89_ry79_rz11_tx95.829_ty92.093_tz106.156.pdb	94.4882
+diffmodeler	full/score.pkl	#76_rx175_ry235_rz75_tx93.947_ty93.397_tz100.934.pdb	94.4882
+diffmodeler	full/score.pkl	#77_rx45_ry289_rz15_tx97.294_ty94.148_tz99.140.pdb	94.4882
+diffmodeler	full/score.pkl	#78_rx175_ry225_rz57_tx93.931_ty95.398_tz100.926.pdb	94.4882
+diffmodeler	full/score.pkl	#79_rx45_ry283_rz23_tx97.266_ty94.119_tz97.127.pdb	94.2913
+diffmodeler	full/score.pkl	#80_rx35_ry279_rz13_tx93.498_ty94.190_tz95.104.pdb	94.2913
+diffmodeler	full/score.pkl	#81_rx35_ry279_rz15_tx93.477_ty94.186_tz95.104.pdb	94.2913
+diffmodeler	full/score.pkl	#82_rx143_ry231_rz105_tx95.720_ty91.463_tz98.844.pdb	94.0945
+diffmodeler	full/score.pkl	#83_rx7_ry133_rz161_tx93.394_ty93.167_tz100.212.pdb	94.0945
+diffmodeler	full/score.pkl	#84_rx5_ry125_rz165_tx93.524_ty93.141_tz98.223.pdb	93.7008
+diffmodeler	full/score.pkl	#85_rx129_ry45_rz31_tx95.637_ty91.702_tz102.370.pdb	93.7008
+diffmodeler	full/score.pkl	#86_rx35_ry287_rz1_tx93.553_ty96.197_tz95.104.pdb	93.7008
+diffmodeler	full/score.pkl	#87_rx215_ry253_rz181_tx93.553_ty96.197_tz95.104.pdb	93.7008
+diffmodeler	full/score.pkl	#88_rx243_ry81_rz19_tx95.546_ty90.968_tz100.050.pdb	93.5039
+diffmodeler	full/score.pkl	#89_rx327_ry129_rz119_tx93.570_ty93.403_tz96.352.pdb	93.5039
+diffmodeler	full/score.pkl	#90_rx155_ry39_rz39_tx95.716_ty91.432_tz102.350.pdb	93.5039
+diffmodeler	full/score.pkl	#91_rx327_ry149_rz355_tx93.719_ty93.712_tz102.360.pdb	93.5039
+diffmodeler	full/score.pkl	#92_rx147_ry31_rz175_tx93.719_ty93.712_tz102.360.pdb	93.5039
+diffmodeler	full/score.pkl	#93_rx131_ry57_rz17_tx93.820_ty93.716_tz104.337.pdb	93.5039
+diffmodeler	full/score.pkl	#94_rx167_ry249_rz23_tx93.439_ty91.186_tz102.962.pdb	93.3071
+diffmodeler	full/score.pkl	#95_rx183_ry211_rz45_tx96.062_ty91.427_tz102.999.pdb	93.3071
+diffmodeler	full/score.pkl	#96_rx209_ry65_rz359_tx95.541_ty93.018_tz100.112.pdb	93.3071
+diffmodeler	full/score.pkl	#97_rx29_ry115_rz179_tx95.541_ty93.018_tz100.112.pdb	93.3071
+diffmodeler	full/score.pkl	#98_rx195_ry57_rz355_tx93.549_ty93.078_tz96.174.pdb	93.1102
+diffmodeler	full/score.pkl	#99_rx15_ry123_rz175_tx93.549_ty93.078_tz96.174.pdb	93.1102
+diffmodeler	full/PDB/pose	#0_rx327_ry357_rz123_tx95.744_ty91.154_tz108.980.pdb
+diffmodeler	full/PDB/#0_rx327_ry357_rz123_tx95.744_ty91.154_tz108.980.pdb/occupancy	  1.00
+diffmodeler	full/PDB/pose	#1_rx333_ry357_rz125_tx95.710_ty91.123_tz108.996.pdb
+diffmodeler	full/PDB/#1_rx333_ry357_rz125_tx95.710_ty91.123_tz108.996.pdb/occupancy	  1.00
+diffmodeler	full/PDB/pose	#2_rx335_ry359_rz123_tx95.688_ty91.091_tz109.019.pdb
+diffmodeler	full/PDB/#2_rx335_ry359_rz123_tx95.688_ty91.091_tz109.019.pdb/occupancy	  1.00
+diffmodeler	full/PDB/pose	#3_rx327_ry5_rz119_tx95.753_ty91.073_tz109.049.pdb
+diffmodeler	full/PDB/#3_rx327_ry5_rz119_tx95.753_ty91.073_tz109.049.pdb/occupancy	  1.00
+diffmodeler	full/PDB/pose	#4_rx331_ry355_rz123_tx95.698_ty91.149_tz108.974.pdb
+diffmodeler	full/PDB/#4_rx331_ry355_rz123_tx95.698_ty91.149_tz108.974.pdb/occupancy	  1.00
+diffmodeler	full/PDB/pose	#5_rx323_ry359_rz121_tx95.776_ty91.152_tz108.989.pdb
+diffmodeler	full/PDB/#5_rx323_ry359_rz121_tx95.776_ty91.152_tz108.989.pdb/occupancy	  0.99
+diffmodeler	full/PDB/pose	#6_rx335_ry357_rz125_tx95.694_ty91.111_tz109.002.pdb
+diffmodeler	full/PDB/#6_rx335_ry357_rz125_tx95.694_ty91.111_tz109.002.pdb/occupancy	  0.99
+diffmodeler	full/PDB/pose	#7_rx325_ry1_rz125_tx95.801_ty91.136_tz109.009.pdb
+diffmodeler	full/PDB/#7_rx325_ry1_rz125_tx95.801_ty91.136_tz109.009.pdb/occupancy	  0.99
+diffmodeler	full/PDB/pose	#8_rx327_ry355_rz127_tx95.762_ty91.182_tz108.964.pdb
+diffmodeler	full/PDB/#8_rx327_ry355_rz127_tx95.762_ty91.182_tz108.964.pdb/occupancy	  0.99
+diffmodeler	full/PDB/pose	#9_rx327_ry5_rz125_tx95.807_ty91.092_tz109.049.pdb
+diffmodeler	full/PDB/#9_rx327_ry5_rz125_tx95.807_ty91.092_tz109.049.pdb/occupancy	  0.99
+diffmodeler	full/PDB/pose	#10_rx335_ry5_rz125_tx95.739_ty91.047_tz109.071.pdb
+diffmodeler	full/PDB/#10_rx335_ry5_rz125_tx95.739_ty91.047_tz109.071.pdb/occupancy	  0.99
+diffmodeler	full/PDB/pose	#11_rx335_ry355_rz125_tx95.681_ty91.128_tz108.987.pdb
+diffmodeler	full/PDB/#11_rx335_ry355_rz125_tx95.681_ty91.128_tz108.987.pdb/occupancy	  0.99
+diffmodeler	full/PDB/pose	#12_rx335_ry355_rz125_tx95.681_ty91.128_tz108.987.pdb
+diffmodeler	full/PDB/#12_rx335_ry355_rz125_tx95.681_ty91.128_tz108.987.pdb/occupancy	  0.99
+diffmodeler	full/PDB/pose	#13_rx335_ry5_rz119_tx95.680_ty91.035_tz109.071.pdb
+diffmodeler	full/PDB/#13_rx335_ry5_rz119_tx95.680_ty91.035_tz109.071.pdb/occupancy	  0.99
+diffmodeler	full/PDB/pose	#14_rx325_ry355_rz123_tx95.750_ty91.184_tz108.960.pdb
+diffmodeler	full/PDB/#14_rx325_ry355_rz123_tx95.750_ty91.184_tz108.960.pdb/occupancy	  0.99
+diffmodeler	full/PDB/pose	#15_rx331_ry3_rz115_tx95.670_ty91.064_tz109.040.pdb
+diffmodeler	full/PDB/#15_rx331_ry3_rz115_tx95.670_ty91.064_tz109.040.pdb/occupancy	  0.99
+diffmodeler	full/PDB/pose	#16_rx323_ry1_rz115_tx95.737_ty91.117_tz109.006.pdb
+diffmodeler	full/PDB/#16_rx323_ry1_rz115_tx95.737_ty91.117_tz109.006.pdb/occupancy	  0.99
+diffmodeler	full/PDB/pose	#17_rx325_ry355_rz125_tx95.764_ty91.189_tz108.960.pdb
+diffmodeler	full/PDB/#17_rx325_ry355_rz125_tx95.764_ty91.189_tz108.960.pdb/occupancy	  0.99
+diffmodeler	full/PDB/pose	#18_rx325_ry5_rz115_tx95.735_ty91.072_tz109.045.pdb
+diffmodeler	full/PDB/#18_rx325_ry5_rz115_tx95.735_ty91.072_tz109.045.pdb/occupancy	  0.99
+diffmodeler	full/PDB/pose	#19_rx325_ry5_rz115_tx95.735_ty91.072_tz109.045.pdb
+diffmodeler	full/PDB/#19_rx325_ry5_rz115_tx95.735_ty91.072_tz109.045.pdb/occupancy	  0.99
+diffmodeler	full/PDB/pose	#20_rx337_ry1_rz135_tx95.792_ty91.092_tz109.043.pdb
+diffmodeler	full/PDB/#20_rx337_ry1_rz135_tx95.792_ty91.092_tz109.043.pdb/occupancy	  0.98
+diffmodeler	full/PDB/pose	#21_rx335_ry7_rz135_tx95.846_ty91.066_tz109.090.pdb
+diffmodeler	full/PDB/#21_rx335_ry7_rz135_tx95.846_ty91.066_tz109.090.pdb/occupancy	  0.98
+diffmodeler	full/PDB/pose	#22_rx327_ry355_rz115_tx95.672_ty91.158_tz108.964.pdb
+diffmodeler	full/PDB/#22_rx327_ry355_rz115_tx95.672_ty91.158_tz108.964.pdb/occupancy	  0.98
+diffmodeler	full/PDB/pose	#23_rx345_ry359_rz125_tx95.627_ty91.038_tz109.063.pdb
+diffmodeler	full/PDB/#23_rx345_ry359_rz125_tx95.627_ty91.038_tz109.063.pdb/occupancy	  0.98
+diffmodeler	full/PDB/pose	#24_rx345_ry1_rz135_tx95.737_ty91.038_tz109.080.pdb
+diffmodeler	full/PDB/#24_rx345_ry1_rz135_tx95.737_ty91.038_tz109.080.pdb/occupancy	  0.97
+diffmodeler	full/PDB/pose	#25_rx313_ry1_rz113_tx95.817_ty91.154_tz109.001.pdb
+diffmodeler	full/PDB/#25_rx313_ry1_rz113_tx95.817_ty91.154_tz109.001.pdb/occupancy	  0.97
+diffmodeler	full/PDB/pose	#26_rx315_ry1_rz115_tx95.813_ty91.153_tz109.000.pdb
+diffmodeler	full/PDB/#26_rx315_ry1_rz115_tx95.813_ty91.153_tz109.000.pdb/occupancy	  0.97
+diffmodeler	full/PDB/pose	#27_rx345_ry5_rz123_tx95.636_ty90.993_tz107.115.pdb
+diffmodeler	full/PDB/#27_rx345_ry5_rz123_tx95.636_ty90.993_tz107.115.pdb/occupancy	  0.96
+diffmodeler	full/PDB/pose	#28_rx265_ry263_rz153_tx95.418_ty94.219_tz95.166.pdb
+diffmodeler	full/PDB/#28_rx265_ry263_rz153_tx95.418_ty94.219_tz95.166.pdb/occupancy	  0.96
+diffmodeler	full/PDB/pose	#29_rx155_ry245_rz61_tx93.626_ty93.226_tz98.918.pdb
+diffmodeler	full/PDB/#29_rx155_ry245_rz61_tx93.626_ty93.226_tz98.918.pdb/occupancy	  0.96
+diffmodeler	full/PDB/pose	#30_rx155_ry245_rz61_tx93.626_ty93.226_tz98.918.pdb
+diffmodeler	full/PDB/#30_rx155_ry245_rz61_tx93.626_ty93.226_tz98.918.pdb/occupancy	  0.96
+diffmodeler	full/PDB/pose	#31_rx145_ry241_rz85_tx93.675_ty95.303_tz98.885.pdb
+diffmodeler	full/PDB/#31_rx145_ry241_rz85_tx93.675_ty95.303_tz98.885.pdb/occupancy	  0.96
+diffmodeler	full/PDB/pose	#32_rx183_ry241_rz35_tx93.756_ty93.161_tz98.977.pdb
+diffmodeler	full/PDB/#32_rx183_ry241_rz35_tx93.756_ty93.161_tz98.977.pdb/occupancy	  0.96
+diffmodeler	full/PDB/pose	#33_rx155_ry239_rz65_tx93.683_ty93.295_tz98.889.pdb
+diffmodeler	full/PDB/#33_rx155_ry239_rz65_tx93.683_ty93.295_tz98.889.pdb/occupancy	  0.96
+diffmodeler	full/PDB/pose	#34_rx145_ry241_rz85_tx93.675_ty95.303_tz98.885.pdb
+diffmodeler	full/PDB/#34_rx145_ry241_rz85_tx93.675_ty95.303_tz98.885.pdb/occupancy	  0.96
+diffmodeler	full/PDB/pose	#35_rx345_ry355_rz135_tx95.697_ty91.079_tz107.031.pdb
+diffmodeler	full/PDB/#35_rx345_ry355_rz135_tx95.697_ty91.079_tz107.031.pdb/occupancy	  0.96
+diffmodeler	full/PDB/pose	#36_rx183_ry241_rz35_tx93.756_ty93.161_tz98.977.pdb
+diffmodeler	full/PDB/#36_rx183_ry241_rz35_tx93.756_ty93.161_tz98.977.pdb/occupancy	  0.96
+diffmodeler	full/PDB/pose	#37_rx165_ry239_rz51_tx93.705_ty93.253_tz100.912.pdb
+diffmodeler	full/PDB/#37_rx165_ry239_rz51_tx93.705_ty93.253_tz100.912.pdb/occupancy	  0.96
+diffmodeler	full/PDB/pose	#38_rx275_ry265_rz143_tx95.435_ty94.218_tz95.157.pdb
+diffmodeler	full/PDB/#38_rx275_ry265_rz143_tx95.435_ty94.218_tz95.157.pdb/occupancy	  0.96
+diffmodeler	full/PDB/pose	#39_rx169_ry251_rz59_tx93.723_ty93.151_tz100.977.pdb
+diffmodeler	full/PDB/#39_rx169_ry251_rz59_tx93.723_ty93.151_tz100.977.pdb/occupancy	  0.96
+diffmodeler	full/PDB/pose	#40_rx171_ry235_rz51_tx93.795_ty93.279_tz100.919.pdb
+diffmodeler	full/PDB/#40_rx171_ry235_rz51_tx93.795_ty93.279_tz100.919.pdb/occupancy	  0.96
+diffmodeler	full/PDB/pose	#41_rx185_ry243_rz39_tx93.789_ty95.158_tz100.989.pdb
+diffmodeler	full/PDB/#41_rx185_ry243_rz39_tx93.789_ty95.158_tz100.989.pdb/occupancy	  0.96
+diffmodeler	full/PDB/pose	#42_rx179_ry239_rz75_tx93.972_ty93.368_tz98.958.pdb
+diffmodeler	full/PDB/#42_rx179_ry239_rz75_tx93.972_ty93.368_tz98.958.pdb/occupancy	  0.96
+diffmodeler	full/PDB/pose	#43_rx250_ry260_rz170_tx95.368_ty94.203_tz95.166.pdb
+diffmodeler	full/PDB/#43_rx250_ry260_rz170_tx95.368_ty94.203_tz95.166.pdb/occupancy	  0.95
+diffmodeler	full/PDB/pose	#44_rx331_ry345_rz121_tx95.623_ty91.245_tz106.909.pdb
+diffmodeler	full/PDB/#44_rx331_ry345_rz121_tx95.623_ty91.245_tz106.909.pdb/occupancy	  0.95
+diffmodeler	full/PDB/pose	#45_rx175_ry249_rz47_tx93.703_ty93.143_tz100.979.pdb
+diffmodeler	full/PDB/#45_rx175_ry249_rz47_tx93.703_ty93.143_tz100.979.pdb/occupancy	  0.95
+diffmodeler	full/PDB/pose	#46_rx175_ry249_rz47_tx93.703_ty93.143_tz100.979.pdb
+diffmodeler	full/PDB/#46_rx175_ry249_rz47_tx93.703_ty93.143_tz100.979.pdb/occupancy	  0.95
+diffmodeler	full/PDB/pose	#47_rx285_ry261_rz135_tx95.398_ty94.238_tz97.203.pdb
+diffmodeler	full/PDB/#47_rx285_ry261_rz135_tx95.398_ty94.238_tz97.203.pdb/occupancy	  0.95
+diffmodeler	full/PDB/pose	#48_rx257_ry255_rz161_tx97.359_ty94.231_tz95.214.pdb
+diffmodeler	full/PDB/#48_rx257_ry255_rz161_tx97.359_ty94.231_tz95.214.pdb/occupancy	  0.95
+diffmodeler	full/PDB/pose	#49_rx65_ry279_rz355_tx95.374_ty94.195_tz95.153.pdb
+diffmodeler	full/PDB/#49_rx65_ry279_rz355_tx95.374_ty94.195_tz95.153.pdb/occupancy	  0.95
+diffmodeler	full/PDB/pose	#50_rx245_ry261_rz175_tx95.374_ty94.195_tz95.153.pdb
+diffmodeler	full/PDB/#50_rx245_ry261_rz175_tx95.374_ty94.195_tz95.153.pdb/occupancy	  0.95
+diffmodeler	full/PDB/pose	#51_rx177_ry253_rz45_tx93.678_ty93.107_tz101.003.pdb
+diffmodeler	full/PDB/#51_rx177_ry253_rz45_tx93.678_ty93.107_tz101.003.pdb/occupancy	  0.95
+diffmodeler	full/PDB/pose	#52_rx251_ry255_rz169_tx95.333_ty94.211_tz95.200.pdb
+diffmodeler	full/PDB/#52_rx251_ry255_rz169_tx95.333_ty94.211_tz95.200.pdb/occupancy	  0.95
+diffmodeler	full/PDB/pose	#53_rx187_ry227_rz41_tx95.953_ty93.276_tz98.988.pdb
+diffmodeler	full/PDB/#53_rx187_ry227_rz41_tx95.953_ty93.276_tz98.988.pdb/occupancy	  0.95
+diffmodeler	full/PDB/pose	#54_rx273_ry255_rz151_tx95.310_ty94.230_tz95.248.pdb
+diffmodeler	full/PDB/#54_rx273_ry255_rz151_tx95.310_ty94.230_tz95.248.pdb/occupancy	  0.95
+diffmodeler	full/PDB/pose	#55_rx167_ry227_rz57_tx95.841_ty91.386_tz100.892.pdb
+diffmodeler	full/PDB/#55_rx167_ry227_rz57_tx95.841_ty91.386_tz100.892.pdb/occupancy	  0.95
+diffmodeler	full/PDB/pose	#56_rx119_ry45_rz31_tx95.571_ty89.783_tz102.355.pdb
+diffmodeler	full/PDB/#56_rx119_ry45_rz31_tx95.571_ty89.783_tz102.355.pdb/occupancy	  0.95
+diffmodeler	full/PDB/pose	#57_rx173_ry223_rz51_tx95.904_ty91.387_tz100.917.pdb
+diffmodeler	full/PDB/#57_rx173_ry223_rz51_tx95.904_ty91.387_tz100.917.pdb/occupancy	  0.95
+diffmodeler	full/PDB/pose	#58_rx163_ry235_rz55_tx93.737_ty93.305_tz100.894.pdb
+diffmodeler	full/PDB/#58_rx163_ry235_rz55_tx93.737_ty93.305_tz100.894.pdb/occupancy	  0.95
+diffmodeler	full/PDB/pose	#59_rx189_ry219_rz47_tx96.060_ty93.376_tz101.014.pdb
+diffmodeler	full/PDB/#59_rx189_ry219_rz47_tx96.060_ty93.376_tz101.014.pdb/occupancy	  0.95
+diffmodeler	full/PDB/pose	#60_rx9_ry121_rz139_tx93.324_ty95.191_tz100.202.pdb
+diffmodeler	full/PDB/#60_rx9_ry121_rz139_tx93.324_ty95.191_tz100.202.pdb/occupancy	  0.95
+diffmodeler	full/PDB/pose	#61_rx53_ry281_rz3_tx95.398_ty94.193_tz95.139.pdb
+diffmodeler	full/PDB/#61_rx53_ry281_rz3_tx95.398_ty94.193_tz95.139.pdb/occupancy	  0.95
+diffmodeler	full/PDB/pose	#62_rx233_ry257_rz179_tx95.423_ty94.206_tz95.146.pdb
+diffmodeler	full/PDB/#62_rx233_ry257_rz179_tx95.423_ty94.206_tz95.146.pdb/occupancy	  0.95
+diffmodeler	full/PDB/pose	#63_rx345_ry117_rz125_tx95.498_ty95.222_tz98.272.pdb
+diffmodeler	full/PDB/#63_rx345_ry117_rz125_tx95.498_ty95.222_tz98.272.pdb/occupancy	  0.95
+diffmodeler	full/PDB/pose	#64_rx191_ry245_rz33_tx93.784_ty93.121_tz101.015.pdb
+diffmodeler	full/PDB/#64_rx191_ry245_rz33_tx93.784_ty93.121_tz101.015.pdb/occupancy	  0.95
+diffmodeler	full/PDB/pose	#65_rx295_ry263_rz123_tx95.438_ty94.240_tz97.188.pdb
+diffmodeler	full/PDB/#65_rx295_ry263_rz123_tx95.438_ty94.240_tz97.188.pdb/occupancy	  0.95
+diffmodeler	full/PDB/pose	#66_rx169_ry239_rz75_tx91.877_ty93.335_tz100.923.pdb
+diffmodeler	full/PDB/#66_rx169_ry239_rz75_tx91.877_ty93.335_tz100.923.pdb/occupancy	  0.95
+diffmodeler	full/PDB/pose	#67_rx85_ry73_rz3_tx95.804_ty92.080_tz106.177.pdb
+diffmodeler	full/PDB/#67_rx85_ry73_rz3_tx95.804_ty92.080_tz106.177.pdb/occupancy	  0.95
+diffmodeler	full/PDB/pose	#68_rx151_ry217_rz79_tx95.767_ty93.603_tz102.840.pdb
+diffmodeler	full/PDB/#68_rx151_ry217_rz79_tx95.767_ty93.603_tz102.840.pdb/occupancy	  0.95
+diffmodeler	full/PDB/pose	#69_rx187_ry231_rz33_tx95.869_ty93.207_tz100.985.pdb
+diffmodeler	full/PDB/#69_rx187_ry231_rz33_tx95.869_ty93.207_tz100.985.pdb/occupancy	  0.95
+diffmodeler	full/PDB/pose	#70_rx129_ry237_rz91_tx95.536_ty93.356_tz98.864.pdb
+diffmodeler	full/PDB/#70_rx129_ry237_rz91_tx95.536_ty93.356_tz98.864.pdb/occupancy	  0.95
+diffmodeler	full/PDB/pose	#71_rx43_ry279_rz7_tx93.476_ty94.197_tz95.117.pdb
+diffmodeler	full/PDB/#71_rx43_ry279_rz7_tx93.476_ty94.197_tz95.117.pdb/occupancy	  0.95
+diffmodeler	full/PDB/pose	#72_rx101_ry77_rz23_tx95.815_ty92.065_tz106.185.pdb
+diffmodeler	full/PDB/#72_rx101_ry77_rz23_tx95.815_ty92.065_tz106.185.pdb/occupancy	  0.95
+diffmodeler	full/PDB/pose	#73_rx113_ry49_rz25_tx95.598_ty89.855_tz102.335.pdb
+diffmodeler	full/PDB/#73_rx113_ry49_rz25_tx95.598_ty89.855_tz102.335.pdb/occupancy	  0.95
+diffmodeler	full/PDB/pose	#74_rx153_ry221_rz69_tx93.766_ty93.521_tz100.844.pdb
+diffmodeler	full/PDB/#74_rx153_ry221_rz69_tx93.766_ty93.521_tz100.844.pdb/occupancy	  0.95
+diffmodeler	full/PDB/pose	#75_rx89_ry79_rz11_tx95.829_ty92.093_tz106.156.pdb
+diffmodeler	full/PDB/#75_rx89_ry79_rz11_tx95.829_ty92.093_tz106.156.pdb/occupancy	  0.94
+diffmodeler	full/PDB/pose	#76_rx175_ry235_rz75_tx93.947_ty93.397_tz100.934.pdb
+diffmodeler	full/PDB/#76_rx175_ry235_rz75_tx93.947_ty93.397_tz100.934.pdb/occupancy	  0.94
+diffmodeler	full/PDB/pose	#77_rx45_ry289_rz15_tx97.294_ty94.148_tz99.140.pdb
+diffmodeler	full/PDB/#77_rx45_ry289_rz15_tx97.294_ty94.148_tz99.140.pdb/occupancy	  0.94
+diffmodeler	full/PDB/pose	#78_rx175_ry225_rz57_tx93.931_ty95.398_tz100.926.pdb
+diffmodeler	full/PDB/#78_rx175_ry225_rz57_tx93.931_ty95.398_tz100.926.pdb/occupancy	  0.94
+diffmodeler	full/PDB/pose	#79_rx45_ry283_rz23_tx97.266_ty94.119_tz97.127.pdb
+diffmodeler	full/PDB/#79_rx45_ry283_rz23_tx97.266_ty94.119_tz97.127.pdb/occupancy	  0.94
+diffmodeler	full/PDB/pose	#80_rx35_ry279_rz13_tx93.498_ty94.190_tz95.104.pdb
+diffmodeler	full/PDB/#80_rx35_ry279_rz13_tx93.498_ty94.190_tz95.104.pdb/occupancy	  0.94
+diffmodeler	full/PDB/pose	#81_rx35_ry279_rz15_tx93.477_ty94.186_tz95.104.pdb
+diffmodeler	full/PDB/#81_rx35_ry279_rz15_tx93.477_ty94.186_tz95.104.pdb/occupancy	  0.94
+diffmodeler	full/PDB/pose	#82_rx143_ry231_rz105_tx95.720_ty91.463_tz98.844.pdb
+diffmodeler	full/PDB/#82_rx143_ry231_rz105_tx95.720_ty91.463_tz98.844.pdb/occupancy	  0.94
+diffmodeler	full/PDB/pose	#83_rx7_ry133_rz161_tx93.394_ty93.167_tz100.212.pdb
+diffmodeler	full/PDB/#83_rx7_ry133_rz161_tx93.394_ty93.167_tz100.212.pdb/occupancy	  0.94
+diffmodeler	full/PDB/pose	#84_rx5_ry125_rz165_tx93.524_ty93.141_tz98.223.pdb
+diffmodeler	full/PDB/#84_rx5_ry125_rz165_tx93.524_ty93.141_tz98.223.pdb/occupancy	  0.94
+diffmodeler	full/PDB/pose	#85_rx129_ry45_rz31_tx95.637_ty91.702_tz102.370.pdb
+diffmodeler	full/PDB/#85_rx129_ry45_rz31_tx95.637_ty91.702_tz102.370.pdb/occupancy	  0.94
+diffmodeler	full/PDB/pose	#86_rx35_ry287_rz1_tx93.553_ty96.197_tz95.104.pdb
+diffmodeler	full/PDB/#86_rx35_ry287_rz1_tx93.553_ty96.197_tz95.104.pdb/occupancy	  0.94
+diffmodeler	full/PDB/pose	#87_rx215_ry253_rz181_tx93.553_ty96.197_tz95.104.pdb
+diffmodeler	full/PDB/#87_rx215_ry253_rz181_tx93.553_ty96.197_tz95.104.pdb/occupancy	  0.94
+diffmodeler	full/PDB/pose	#88_rx243_ry81_rz19_tx95.546_ty90.968_tz100.050.pdb
+diffmodeler	full/PDB/#88_rx243_ry81_rz19_tx95.546_ty90.968_tz100.050.pdb/occupancy	  0.94
+diffmodeler	full/PDB/pose	#89_rx327_ry129_rz119_tx93.570_ty93.403_tz96.352.pdb
+diffmodeler	full/PDB/#89_rx327_ry129_rz119_tx93.570_ty93.403_tz96.352.pdb/occupancy	  0.94
+diffmodeler	full/PDB/pose	#90_rx155_ry39_rz39_tx95.716_ty91.432_tz102.350.pdb
+diffmodeler	full/PDB/#90_rx155_ry39_rz39_tx95.716_ty91.432_tz102.350.pdb/occupancy	  0.94
+diffmodeler	full/PDB/pose	#91_rx327_ry149_rz355_tx93.719_ty93.712_tz102.360.pdb
+diffmodeler	full/PDB/#91_rx327_ry149_rz355_tx93.719_ty93.712_tz102.360.pdb/occupancy	  0.94
+diffmodeler	full/PDB/pose	#92_rx147_ry31_rz175_tx93.719_ty93.712_tz102.360.pdb
+diffmodeler	full/PDB/#92_rx147_ry31_rz175_tx93.719_ty93.712_tz102.360.pdb/occupancy	  0.94
+diffmodeler	full/PDB/pose	#93_rx131_ry57_rz17_tx93.820_ty93.716_tz104.337.pdb
+diffmodeler	full/PDB/#93_rx131_ry57_rz17_tx93.820_ty93.716_tz104.337.pdb/occupancy	  0.94
+diffmodeler	full/PDB/pose	#94_rx167_ry249_rz23_tx93.439_ty91.186_tz102.962.pdb
+diffmodeler	full/PDB/#94_rx167_ry249_rz23_tx93.439_ty91.186_tz102.962.pdb/occupancy	  0.93
+diffmodeler	full/PDB/pose	#95_rx183_ry211_rz45_tx96.062_ty91.427_tz102.999.pdb
+diffmodeler	full/PDB/#95_rx183_ry211_rz45_tx96.062_ty91.427_tz102.999.pdb/occupancy	  0.93
+diffmodeler	full/PDB/pose	#96_rx209_ry65_rz359_tx95.541_ty93.018_tz100.112.pdb
+diffmodeler	full/PDB/#96_rx209_ry65_rz359_tx95.541_ty93.018_tz100.112.pdb/occupancy	  0.93
+diffmodeler	full/PDB/pose	#97_rx29_ry115_rz179_tx95.541_ty93.018_tz100.112.pdb
+diffmodeler	full/PDB/#97_rx29_ry115_rz179_tx95.541_ty93.018_tz100.112.pdb/occupancy	  0.93
+diffmodeler	full/PDB/pose	#98_rx195_ry57_rz355_tx93.549_ty93.078_tz96.174.pdb
+diffmodeler	full/PDB/#98_rx195_ry57_rz355_tx93.549_ty93.078_tz96.174.pdb/occupancy	  0.93
+diffmodeler	full/PDB/pose	#99_rx15_ry123_rz175_tx93.549_ty93.078_tz96.174.pdb
+diffmodeler	full/PDB/#99_rx15_ry123_rz175_tx93.549_ty93.078_tz96.174.pdb/occupancy	  0.93
+diffmodeler	half/score.pkl	#0_rx327_ry357_rz123_tx95.744_ty91.154_tz108.980.pdb	99.6063
+diffmodeler	half/score.pkl	#1_rx333_ry357_rz125_tx95.710_ty91.123_tz108.996.pdb	99.6063
+diffmodeler	half/score.pkl	#2_rx335_ry359_rz123_tx95.688_ty91.091_tz109.019.pdb	99.6063
+diffmodeler	half/score.pkl	#3_rx327_ry5_rz119_tx95.753_ty91.073_tz109.049.pdb	99.6063
+diffmodeler	half/score.pkl	#4_rx331_ry355_rz123_tx95.698_ty91.149_tz108.974.pdb	99.6063
+diffmodeler	half/score.pkl	#5_rx323_ry359_rz121_tx95.776_ty91.152_tz108.989.pdb	99.4094
+diffmodeler	half/score.pkl	#6_rx335_ry357_rz125_tx95.694_ty91.111_tz109.002.pdb	99.4094
+diffmodeler	half/score.pkl	#7_rx325_ry1_rz125_tx95.801_ty91.136_tz109.009.pdb	99.4094
+diffmodeler	half/score.pkl	#8_rx327_ry5_rz125_tx95.807_ty91.092_tz109.049.pdb	99.2126
+diffmodeler	half/score.pkl	#9_rx335_ry5_rz125_tx95.739_ty91.047_tz109.071.pdb	99.0157
+diffmodeler	half/score.pkl	#10_rx335_ry5_rz119_tx95.680_ty91.035_tz109.071.pdb	99.0157
+diffmodeler	half/score.pkl	#11_rx335_ry355_rz127_tx95.698_ty91.132_tz108.987.pdb	98.6220
+diffmodeler	half/score.pkl	#12_rx323_ry3_rz115_tx97.745_ty91.099_tz109.023.pdb	98.4252
+diffmodeler	half/score.pkl	#13_rx325_ry355_rz125_tx95.764_ty89.189_tz108.960.pdb	98.4252
+diffmodeler	half/score.pkl	#14_rx321_ry5_rz115_tx97.773_ty91.090_tz109.039.pdb	98.2283
+diffmodeler	half/score.pkl	#15_rx321_ry5_rz115_tx97.773_ty91.090_tz109.039.pdb	98.2283
+diffmodeler	half/score.pkl	#16_rx327_ry359_rz115_tx97.690_ty91.119_tz108.996.pdb	97.8346
+diffmodeler	half/score.pkl	#17_rx331_ry3_rz135_tx95.849_ty89.121_tz109.040.pdb	97.8346
+diffmodeler	half/score.pkl	#18_rx335_ry5_rz135_tx95.833_ty89.079_tz109.071.pdb	97.8346
+diffmodeler	half/score.pkl	#19_rx335_ry5_rz135_tx95.833_ty89.079_tz109.071.pdb	97.8346
+diffmodeler	half/score.pkl	#20_rx345_ry359_rz129_tx95.666_ty91.042_tz109.063.pdb	97.6378
+diffmodeler	half/score.pkl	#21_rx325_ry353_rz115_tx97.681_ty91.187_tz110.946.pdb	97.0472
+diffmodeler	half/score.pkl	#22_rx313_ry1_rz113_tx95.817_ty91.154_tz109.001.pdb	96.8504
+diffmodeler	half/score.pkl	#23_rx337_ry355_rz135_tx95.749_ty91.135_tz108.994.pdb	96.6535
+diffmodeler	half/score.pkl	#24_rx347_ry9_rz125_tx95.660_ty90.959_tz107.164.pdb	96.2598
+diffmodeler	half/score.pkl	#25_rx345_ry355_rz133_tx95.678_ty91.076_tz109.031.pdb	96.0630
+diffmodeler	half/score.pkl	#26_rx345_ry5_rz135_tx95.762_ty89.014_tz109.115.pdb	96.0630
+diffmodeler	half/score.pkl	#27_rx65_ry283_rz359_tx97.302_ty94.178_tz99.173.pdb	95.0787
+diffmodeler	half/score.pkl	#28_rx245_ry257_rz179_tx97.302_ty94.178_tz99.173.pdb	95.0787
+diffmodeler	half/score.pkl	#29_rx315_ry355_rz121_tx97.825_ty93.234_tz106.952.pdb	94.8819
+diffmodeler	half/score.pkl	#30_rx1_ry17_rz135_tx95.709_ty90.877_tz107.335.pdb	94.8819
+diffmodeler	half/score.pkl	#31_rx349_ry17_rz129_tx97.724_ty90.913_tz107.257.pdb	94.2913
+diffmodeler	half/score.pkl	#32_rx57_ry283_rz7_tx97.301_ty94.164_tz99.155.pdb	94.0945
+diffmodeler	half/score.pkl	#33_rx277_ry259_rz149_tx99.315_ty94.213_tz97.215.pdb	94.0945
+diffmodeler	half/score.pkl	#34_rx191_ry223_rz39_tx98.009_ty93.286_tz99.018.pdb	94.0945
+diffmodeler	half/score.pkl	#35_rx285_ry257_rz137_tx99.357_ty94.248_tz97.246.pdb	94.0945
+diffmodeler	half/score.pkl	#36_rx285_ry257_rz137_tx99.357_ty94.248_tz97.246.pdb	94.0945
+diffmodeler	half/score.pkl	#37_rx207_ry243_rz45_tx98.042_ty91.226_tz101.081.pdb	94.0945
+diffmodeler	half/score.pkl	#38_rx249_ry255_rz173_tx99.310_ty94.197_tz99.195.pdb	94.0945
+diffmodeler	half/score.pkl	#39_rx319_ry355_rz105_tx97.675_ty91.175_tz108.953.pdb	93.8976
+diffmodeler	half/score.pkl	#40_rx259_ry261_rz165_tx97.337_ty92.195_tz99.174.pdb	93.8976
+diffmodeler	half/score.pkl	#41_rx53_ry283_rz9_tx97.321_ty92.166_tz99.146.pdb	93.8976
+diffmodeler	half/score.pkl	#42_rx255_ry261_rz171_tx97.315_ty92.181_tz99.168.pdb	93.8976
+diffmodeler	half/score.pkl	#43_rx311_ry355_rz109_tx95.784_ty91.209_tz108.954.pdb	93.7008
+diffmodeler	half/score.pkl	#44_rx300_ry260_rz130_tx99.299_ty94.211_tz95.224.pdb	93.5039
+diffmodeler	half/score.pkl	#45_rx51_ry281_rz17_tx99.279_ty94.135_tz97.135.pdb	93.5039
+diffmodeler	half/score.pkl	#46_rx67_ry275_rz1_tx97.325_ty92.161_tz99.137.pdb	93.5039
+diffmodeler	half/score.pkl	#47_rx287_ry257_rz133_tx99.382_ty94.258_tz97.248.pdb	93.5039
+diffmodeler	half/score.pkl	#48_rx345_ry19_rz123_tx95.692_ty88.908_tz107.258.pdb	93.5039
+diffmodeler	half/score.pkl	#49_rx271_ry265_rz155_tx97.350_ty92.187_tz99.155.pdb	93.5039
+diffmodeler	half/score.pkl	#50_rx173_ry215_rz43_tx97.941_ty93.411_tz100.927.pdb	93.3071
+diffmodeler	half/score.pkl	#51_rx205_ry245_rz47_tx98.025_ty91.220_tz101.071.pdb	93.3071
+diffmodeler	half/score.pkl	#52_rx143_ry21_rz155_tx97.848_ty91.573_tz98.337.pdb	93.3071
+diffmodeler	half/score.pkl	#53_rx183_ry211_rz45_tx96.062_ty91.427_tz102.999.pdb	93.3071
+diffmodeler	half/score.pkl	#54_rx35_ry277_rz29_tx97.354_ty92.147_tz99.105.pdb	93.1102
+diffmodeler	half/score.pkl	#55_rx41_ry281_rz21_tx99.339_ty94.149_tz97.115.pdb	93.1102
+diffmodeler	half/score.pkl	#56_rx211_ry79_rz355_tx97.605_ty93.008_tz98.105.pdb	93.1102
+diffmodeler	half/score.pkl	#57_rx31_ry101_rz175_tx97.605_ty93.008_tz98.105.pdb	93.1102
+diffmodeler	half/score.pkl	#58_rx305_ry259_rz123_tx99.322_ty94.230_tz97.238.pdb	92.9134
+diffmodeler	half/score.pkl	#59_rx351_ry125_rz145_tx97.501_ty91.237_tz100.281.pdb	92.9134
+diffmodeler	half/score.pkl	#60_rx195_ry241_rz57_tx96.021_ty91.286_tz103.027.pdb	92.7165
+diffmodeler	half/score.pkl	#61_rx75_ry265_rz359_tx99.353_ty94.133_tz95.091.pdb	92.7165
+diffmodeler	half/score.pkl	#62_rx349_ry265_rz83_tx99.333_ty94.184_tz95.161.pdb	92.5197
+diffmodeler	half/score.pkl	#63_rx185_ry211_rz41_tx98.064_ty93.390_tz101.012.pdb	92.5197
+diffmodeler	half/score.pkl	#64_rx21_ry99_rz163_tx97.603_ty91.020_tz100.118.pdb	92.5197
+diffmodeler	half/score.pkl	#65_rx145_ry21_rz155_tx97.858_ty91.591_tz98.334.pdb	92.5197
+diffmodeler	half/score.pkl	#66_rx205_ry229_rz35_tx98.056_ty91.224_tz101.095.pdb	92.5197
+diffmodeler	half/score.pkl	#67_rx201_ry77_rz355_tx99.687_ty93.037_tz100.129.pdb	92.5197
+diffmodeler	half/score.pkl	#68_rx21_ry103_rz175_tx99.687_ty93.037_tz100.129.pdb	92.5197
+diffmodeler	half/score.pkl	#69_rx343_ry101_rz119_tx95.566_ty93.082_tz102.179.pdb	92.5197
+diffmodeler	half/score.pkl	#70_rx153_ry15_rz143_tx97.965_ty91.555_tz100.286.pdb	92.5197
+diffmodeler	half/score.pkl	#71_rx19_ry105_rz171_tx99.649_ty93.041_tz100.138.pdb	92.5197
+diffmodeler	half/score.pkl	#72_rx5_ry285_rz169_tx95.261_ty89.194_tz105.030.pdb	92.3228
+diffmodeler	half/score.pkl	#73_rx9_ry101_rz149_tx97.573_ty91.046_tz100.145.pdb	92.3228
+diffmodeler	half/score.pkl	#74_rx113_ry45_rz23_tx95.560_ty93.835_tz106.340.pdb	92.3228
+diffmodeler	half/score.pkl	#75_rx357_ry355_rz135_tx95.628_ty91.001_tz111.104.pdb	92.3228
+diffmodeler	half/score.pkl	#76_rx169_ry215_rz51_tx97.928_ty91.471_tz102.907.pdb	92.3228
+diffmodeler	half/score.pkl	#77_rx185_ry219_rz29_tx97.937_ty93.257_tz100.988.pdb	92.3228
+diffmodeler	half/score.pkl	#78_rx15_ry289_rz165_tx95.335_ty89.128_tz101.041.pdb	92.3228
+diffmodeler	half/score.pkl	#79_rx345_ry265_rz87_tx99.330_ty94.184_tz95.163.pdb	92.3228
+diffmodeler	half/score.pkl	#80_rx161_ry245_rz5_tx97.332_ty91.313_tz102.929.pdb	92.3228
+diffmodeler	half/score.pkl	#81_rx177_ry253_rz359_tx95.300_ty89.202_tz105.003.pdb	92.1260
+diffmodeler	half/score.pkl	#82_rx319_ry131_rz119_tx97.635_ty91.459_tz98.364.pdb	91.9291
+diffmodeler	half/score.pkl	#83_rx187_ry213_rz35_tx98.038_ty93.325_tz103.019.pdb	91.9291
+diffmodeler	half/score.pkl	#84_rx351_ry97_rz135_tx97.655_ty91.044_tz100.141.pdb	91.9291
+diffmodeler	half/score.pkl	#85_rx157_ry57_rz151_tx99.524_ty89.898_tz104.315.pdb	91.7323
+diffmodeler	half/score.pkl	#86_rx150_ry60_rz140_tx99.494_ty89.889_tz104.314.pdb	91.5354
+diffmodeler	half/score.pkl	#87_rx160_ry50_rz160_tx99.581_ty93.876_tz98.327.pdb	91.5354
+diffmodeler	half/score.pkl	#88_rx301_ry249_rz127_tx99.286_ty92.269_tz99.358.pdb	91.5354
+diffmodeler	half/score.pkl	#89_rx169_ry253_rz13_tx97.342_ty91.195_tz102.988.pdb	91.5354
+diffmodeler	half/score.pkl	#90_rx169_ry49_rz163_tx99.637_ty91.940_tz96.298.pdb	91.5354
+diffmodeler	half/score.pkl	#91_rx10_ry290_rz50_tx97.327_ty92.045_tz97.024.pdb	91.3386
+diffmodeler	half/score.pkl	#92_rx35_ry83_rz147_tx97.415_ty93.007_tz86.068.pdb	91.3386
+diffmodeler	half/score.pkl	#93_rx129_ry235_rz49_tx97.406_ty93.481_tz98.856.pdb	91.3386
+diffmodeler	half/score.pkl	#94_rx267_ry245_rz159_tx99.230_ty92.229_tz99.331.pdb	91.3386
+diffmodeler	half/score.pkl	#95_rx147_ry245_rz19_tx97.323_ty91.376_tz100.909.pdb	91.1417
+diffmodeler	half/score.pkl	#96_rx220_ry260_rz20_tx97.833_ty91.040_tz105.113.pdb	90.9449
+diffmodeler	half/score.pkl	#97_rx311_ry101_rz103_tx97.759_ty91.121_tz102.192.pdb	90.9449
+diffmodeler	half/score.pkl	#98_rx30_ry110_rz10_tx97.512_ty92.180_tz104.111.pdb	90.5512
+diffmodeler	half/score.pkl	#99_rx140_ry20_rz20_tx95.383_ty91.470_tz108.335.pdb	90.5512
+diffmodeler	half/PDB/pose	#0_rx327_ry357_rz123_tx95.744_ty91.154_tz108.980.pdb
+diffmodeler	half/PDB/#0_rx327_ry357_rz123_tx95.744_ty91.154_tz108.980.pdb/occupancy	  1.00
+diffmodeler	half/PDB/pose	#1_rx333_ry357_rz125_tx95.710_ty91.123_tz108.996.pdb
+diffmodeler	half/PDB/#1_rx333_ry357_rz125_tx95.710_ty91.123_tz108.996.pdb/occupancy	  1.00
+diffmodeler	half/PDB/pose	#2_rx335_ry359_rz123_tx95.688_ty91.091_tz109.019.pdb
+diffmodeler	half/PDB/#2_rx335_ry359_rz123_tx95.688_ty91.091_tz109.019.pdb/occupancy	  1.00
+diffmodeler	half/PDB/pose	#3_rx327_ry5_rz119_tx95.753_ty91.073_tz109.049.pdb
+diffmodeler	half/PDB/#3_rx327_ry5_rz119_tx95.753_ty91.073_tz109.049.pdb/occupancy	  1.00
+diffmodeler	half/PDB/pose	#4_rx331_ry355_rz123_tx95.698_ty91.149_tz108.974.pdb
+diffmodeler	half/PDB/#4_rx331_ry355_rz123_tx95.698_ty91.149_tz108.974.pdb/occupancy	  1.00
+diffmodeler	half/PDB/pose	#5_rx323_ry359_rz121_tx95.776_ty91.152_tz108.989.pdb
+diffmodeler	half/PDB/#5_rx323_ry359_rz121_tx95.776_ty91.152_tz108.989.pdb/occupancy	  0.99
+diffmodeler	half/PDB/pose	#6_rx335_ry357_rz125_tx95.694_ty91.111_tz109.002.pdb
+diffmodeler	half/PDB/#6_rx335_ry357_rz125_tx95.694_ty91.111_tz109.002.pdb/occupancy	  0.99
+diffmodeler	half/PDB/pose	#7_rx325_ry1_rz125_tx95.801_ty91.136_tz109.009.pdb
+diffmodeler	half/PDB/#7_rx325_ry1_rz125_tx95.801_ty91.136_tz109.009.pdb/occupancy	  0.99
+diffmodeler	half/PDB/pose	#8_rx327_ry5_rz125_tx95.807_ty91.092_tz109.049.pdb
+diffmodeler	half/PDB/#8_rx327_ry5_rz125_tx95.807_ty91.092_tz109.049.pdb/occupancy	  0.99
+diffmodeler	half/PDB/pose	#9_rx335_ry5_rz125_tx95.739_ty91.047_tz109.071.pdb
+diffmodeler	half/PDB/#9_rx335_ry5_rz125_tx95.739_ty91.047_tz109.071.pdb/occupancy	  0.99
+diffmodeler	half/PDB/pose	#10_rx335_ry5_rz119_tx95.680_ty91.035_tz109.071.pdb
+diffmodeler	half/PDB/#10_rx335_ry5_rz119_tx95.680_ty91.035_tz109.071.pdb/occupancy	  0.99
+diffmodeler	half/PDB/pose	#11_rx335_ry355_rz127_tx95.698_ty91.132_tz108.987.pdb
+diffmodeler	half/PDB/#11_rx335_ry355_rz127_tx95.698_ty91.132_tz108.987.pdb/occupancy	  0.99
+diffmodeler	half/PDB/pose	#12_rx323_ry3_rz115_tx97.745_ty91.099_tz109.023.pdb
+diffmodeler	half/PDB/#12_rx323_ry3_rz115_tx97.745_ty91.099_tz109.023.pdb/occupancy	  0.98
+diffmodeler	half/PDB/pose	#13_rx325_ry355_rz125_tx95.764_ty89.189_tz108.960.pdb
+diffmodeler	half/PDB/#13_rx325_ry355_rz125_tx95.764_ty89.189_tz108.960.pdb/occupancy	  0.98
+diffmodeler	half/PDB/pose	#14_rx321_ry5_rz115_tx97.773_ty91.090_tz109.039.pdb
+diffmodeler	half/PDB/#14_rx321_ry5_rz115_tx97.773_ty91.090_tz109.039.pdb/occupancy	  0.98
+diffmodeler	half/PDB/pose	#15_rx321_ry5_rz115_tx97.773_ty91.090_tz109.039.pdb
+diffmodeler	half/PDB/#15_rx321_ry5_rz115_tx97.773_ty91.090_tz109.039.pdb/occupancy	  0.98
+diffmodeler	half/PDB/pose	#16_rx327_ry359_rz115_tx97.690_ty91.119_tz108.996.pdb
+diffmodeler	half/PDB/#16_rx327_ry359_rz115_tx97.690_ty91.119_tz108.996.pdb/occupancy	  0.98
+diffmodeler	half/PDB/pose	#17_rx331_ry3_rz135_tx95.849_ty89.121_tz109.040.pdb
+diffmodeler	half/PDB/#17_rx331_ry3_rz135_tx95.849_ty89.121_tz109.040.pdb/occupancy	  0.98
+diffmodeler	half/PDB/pose	#18_rx335_ry5_rz135_tx95.833_ty89.079_tz109.071.pdb
+diffmodeler	half/PDB/#18_rx335_ry5_rz135_tx95.833_ty89.079_tz109.071.pdb/occupancy	  0.98
+diffmodeler	half/PDB/pose	#19_rx335_ry5_rz135_tx95.833_ty89.079_tz109.071.pdb
+diffmodeler	half/PDB/#19_rx335_ry5_rz135_tx95.833_ty89.079_tz109.071.pdb/occupancy	  0.98
+diffmodeler	half/PDB/pose	#20_rx345_ry359_rz129_tx95.666_ty91.042_tz109.063.pdb
+diffmodeler	half/PDB/#20_rx345_ry359_rz129_tx95.666_ty91.042_tz109.063.pdb/occupancy	  0.98
+diffmodeler	half/PDB/pose	#21_rx325_ry353_rz115_tx97.681_ty91.187_tz110.946.pdb
+diffmodeler	half/PDB/#21_rx325_ry353_rz115_tx97.681_ty91.187_tz110.946.pdb/occupancy	  0.97
+diffmodeler	half/PDB/pose	#22_rx313_ry1_rz113_tx95.817_ty91.154_tz109.001.pdb
+diffmodeler	half/PDB/#22_rx313_ry1_rz113_tx95.817_ty91.154_tz109.001.pdb/occupancy	  0.97
+diffmodeler	half/PDB/pose	#23_rx337_ry355_rz135_tx95.749_ty91.135_tz108.994.pdb
+diffmodeler	half/PDB/#23_rx337_ry355_rz135_tx95.749_ty91.135_tz108.994.pdb/occupancy	  0.97
+diffmodeler	half/PDB/pose	#24_rx347_ry9_rz125_tx95.660_ty90.959_tz107.164.pdb
+diffmodeler	half/PDB/#24_rx347_ry9_rz125_tx95.660_ty90.959_tz107.164.pdb/occupancy	  0.96
+diffmodeler	half/PDB/pose	#25_rx345_ry355_rz133_tx95.678_ty91.076_tz109.031.pdb
+diffmodeler	half/PDB/#25_rx345_ry355_rz133_tx95.678_ty91.076_tz109.031.pdb/occupancy	  0.96
+diffmodeler	half/PDB/pose	#26_rx345_ry5_rz135_tx95.762_ty89.014_tz109.115.pdb
+diffmodeler	half/PDB/#26_rx345_ry5_rz135_tx95.762_ty89.014_tz109.115.pdb/occupancy	  0.96
+diffmodeler	half/PDB/pose	#27_rx65_ry283_rz359_tx97.302_ty94.178_tz99.173.pdb
+diffmodeler	half/PDB/#27_rx65_ry283_rz359_tx97.302_ty94.178_tz99.173.pdb/occupancy	  0.95
+diffmodeler	half/PDB/pose	#28_rx245_ry257_rz179_tx97.302_ty94.178_tz99.173.pdb
+diffmodeler	half/PDB/#28_rx245_ry257_rz179_tx97.302_ty94.178_tz99.173.pdb/occupancy	  0.95
+diffmodeler	half/PDB/pose	#29_rx315_ry355_rz121_tx97.825_ty93.234_tz106.952.pdb
+diffmodeler	half/PDB/#29_rx315_ry355_rz121_tx97.825_ty93.234_tz106.952.pdb/occupancy	  0.95
+diffmodeler	half/PDB/pose	#30_rx1_ry17_rz135_tx95.709_ty90.877_tz107.335.pdb
+diffmodeler	half/PDB/#30_rx1_ry17_rz135_tx95.709_ty90.877_tz107.335.pdb/occupancy	  0.95
+diffmodeler	half/PDB/pose	#31_rx349_ry17_rz129_tx97.724_ty90.913_tz107.257.pdb
+diffmodeler	half/PDB/#31_rx349_ry17_rz129_tx97.724_ty90.913_tz107.257.pdb/occupancy	  0.94
+diffmodeler	half/PDB/pose	#32_rx57_ry283_rz7_tx97.301_ty94.164_tz99.155.pdb
+diffmodeler	half/PDB/#32_rx57_ry283_rz7_tx97.301_ty94.164_tz99.155.pdb/occupancy	  0.94
+diffmodeler	half/PDB/pose	#33_rx277_ry259_rz149_tx99.315_ty94.213_tz97.215.pdb
+diffmodeler	half/PDB/#33_rx277_ry259_rz149_tx99.315_ty94.213_tz97.215.pdb/occupancy	  0.94
+diffmodeler	half/PDB/pose	#34_rx191_ry223_rz39_tx98.009_ty93.286_tz99.018.pdb
+diffmodeler	half/PDB/#34_rx191_ry223_rz39_tx98.009_ty93.286_tz99.018.pdb/occupancy	  0.94
+diffmodeler	half/PDB/pose	#35_rx285_ry257_rz137_tx99.357_ty94.248_tz97.246.pdb
+diffmodeler	half/PDB/#35_rx285_ry257_rz137_tx99.357_ty94.248_tz97.246.pdb/occupancy	  0.94
+diffmodeler	half/PDB/pose	#36_rx285_ry257_rz137_tx99.357_ty94.248_tz97.246.pdb
+diffmodeler	half/PDB/#36_rx285_ry257_rz137_tx99.357_ty94.248_tz97.246.pdb/occupancy	  0.94
+diffmodeler	half/PDB/pose	#37_rx207_ry243_rz45_tx98.042_ty91.226_tz101.081.pdb
+diffmodeler	half/PDB/#37_rx207_ry243_rz45_tx98.042_ty91.226_tz101.081.pdb/occupancy	  0.94
+diffmodeler	half/PDB/pose	#38_rx249_ry255_rz173_tx99.310_ty94.197_tz99.195.pdb
+diffmodeler	half/PDB/#38_rx249_ry255_rz173_tx99.310_ty94.197_tz99.195.pdb/occupancy	  0.94
+diffmodeler	half/PDB/pose	#39_rx319_ry355_rz105_tx97.675_ty91.175_tz108.953.pdb
+diffmodeler	half/PDB/#39_rx319_ry355_rz105_tx97.675_ty91.175_tz108.953.pdb/occupancy	  0.94
+diffmodeler	half/PDB/pose	#40_rx259_ry261_rz165_tx97.337_ty92.195_tz99.174.pdb
+diffmodeler	half/PDB/#40_rx259_ry261_rz165_tx97.337_ty92.195_tz99.174.pdb/occupancy	  0.94
+diffmodeler	half/PDB/pose	#41_rx53_ry283_rz9_tx97.321_ty92.166_tz99.146.pdb
+diffmodeler	half/PDB/#41_rx53_ry283_rz9_tx97.321_ty92.166_tz99.146.pdb/occupancy	  0.94
+diffmodeler	half/PDB/pose	#42_rx255_ry261_rz171_tx97.315_ty92.181_tz99.168.pdb
+diffmodeler	half/PDB/#42_rx255_ry261_rz171_tx97.315_ty92.181_tz99.168.pdb/occupancy	  0.94
+diffmodeler	half/PDB/pose	#43_rx311_ry355_rz109_tx95.784_ty91.209_tz108.954.pdb
+diffmodeler	half/PDB/#43_rx311_ry355_rz109_tx95.784_ty91.209_tz108.954.pdb/occupancy	  0.94
+diffmodeler	half/PDB/pose	#44_rx300_ry260_rz130_tx99.299_ty94.211_tz95.224.pdb
+diffmodeler	half/PDB/#44_rx300_ry260_rz130_tx99.299_ty94.211_tz95.224.pdb/occupancy	  0.94
+diffmodeler	half/PDB/pose	#45_rx51_ry281_rz17_tx99.279_ty94.135_tz97.135.pdb
+diffmodeler	half/PDB/#45_rx51_ry281_rz17_tx99.279_ty94.135_tz97.135.pdb/occupancy	  0.94
+diffmodeler	half/PDB/pose	#46_rx67_ry275_rz1_tx97.325_ty92.161_tz99.137.pdb
+diffmodeler	half/PDB/#46_rx67_ry275_rz1_tx97.325_ty92.161_tz99.137.pdb/occupancy	  0.94
+diffmodeler	half/PDB/pose	#47_rx287_ry257_rz133_tx99.382_ty94.258_tz97.248.pdb
+diffmodeler	half/PDB/#47_rx287_ry257_rz133_tx99.382_ty94.258_tz97.248.pdb/occupancy	  0.94
+diffmodeler	half/PDB/pose	#48_rx345_ry19_rz123_tx95.692_ty88.908_tz107.258.pdb
+diffmodeler	half/PDB/#48_rx345_ry19_rz123_tx95.692_ty88.908_tz107.258.pdb/occupancy	  0.94
+diffmodeler	half/PDB/pose	#49_rx271_ry265_rz155_tx97.350_ty92.187_tz99.155.pdb
+diffmodeler	half/PDB/#49_rx271_ry265_rz155_tx97.350_ty92.187_tz99.155.pdb/occupancy	  0.94
+diffmodeler	half/PDB/pose	#50_rx173_ry215_rz43_tx97.941_ty93.411_tz100.927.pdb
+diffmodeler	half/PDB/#50_rx173_ry215_rz43_tx97.941_ty93.411_tz100.927.pdb/occupancy	  0.93
+diffmodeler	half/PDB/pose	#51_rx205_ry245_rz47_tx98.025_ty91.220_tz101.071.pdb
+diffmodeler	half/PDB/#51_rx205_ry245_rz47_tx98.025_ty91.220_tz101.071.pdb/occupancy	  0.93
+diffmodeler	half/PDB/pose	#52_rx143_ry21_rz155_tx97.848_ty91.573_tz98.337.pdb
+diffmodeler	half/PDB/#52_rx143_ry21_rz155_tx97.848_ty91.573_tz98.337.pdb/occupancy	  0.93
+diffmodeler	half/PDB/pose	#53_rx183_ry211_rz45_tx96.062_ty91.427_tz102.999.pdb
+diffmodeler	half/PDB/#53_rx183_ry211_rz45_tx96.062_ty91.427_tz102.999.pdb/occupancy	  0.93
+diffmodeler	half/PDB/pose	#54_rx35_ry277_rz29_tx97.354_ty92.147_tz99.105.pdb
+diffmodeler	half/PDB/#54_rx35_ry277_rz29_tx97.354_ty92.147_tz99.105.pdb/occupancy	  0.93
+diffmodeler	half/PDB/pose	#55_rx41_ry281_rz21_tx99.339_ty94.149_tz97.115.pdb
+diffmodeler	half/PDB/#55_rx41_ry281_rz21_tx99.339_ty94.149_tz97.115.pdb/occupancy	  0.93
+diffmodeler	half/PDB/pose	#56_rx211_ry79_rz355_tx97.605_ty93.008_tz98.105.pdb
+diffmodeler	half/PDB/#56_rx211_ry79_rz355_tx97.605_ty93.008_tz98.105.pdb/occupancy	  0.93
+diffmodeler	half/PDB/pose	#57_rx31_ry101_rz175_tx97.605_ty93.008_tz98.105.pdb
+diffmodeler	half/PDB/#57_rx31_ry101_rz175_tx97.605_ty93.008_tz98.105.pdb/occupancy	  0.93
+diffmodeler	half/PDB/pose	#58_rx305_ry259_rz123_tx99.322_ty94.230_tz97.238.pdb
+diffmodeler	half/PDB/#58_rx305_ry259_rz123_tx99.322_ty94.230_tz97.238.pdb/occupancy	  0.93
+diffmodeler	half/PDB/pose	#59_rx351_ry125_rz145_tx97.501_ty91.237_tz100.281.pdb
+diffmodeler	half/PDB/#59_rx351_ry125_rz145_tx97.501_ty91.237_tz100.281.pdb/occupancy	  0.93
+diffmodeler	half/PDB/pose	#60_rx195_ry241_rz57_tx96.021_ty91.286_tz103.027.pdb
+diffmodeler	half/PDB/#60_rx195_ry241_rz57_tx96.021_ty91.286_tz103.027.pdb/occupancy	  0.93
+diffmodeler	half/PDB/pose	#61_rx75_ry265_rz359_tx99.353_ty94.133_tz95.091.pdb
+diffmodeler	half/PDB/#61_rx75_ry265_rz359_tx99.353_ty94.133_tz95.091.pdb/occupancy	  0.93
+diffmodeler	half/PDB/pose	#62_rx349_ry265_rz83_tx99.333_ty94.184_tz95.161.pdb
+diffmodeler	half/PDB/#62_rx349_ry265_rz83_tx99.333_ty94.184_tz95.161.pdb/occupancy	  0.93
+diffmodeler	half/PDB/pose	#63_rx185_ry211_rz41_tx98.064_ty93.390_tz101.012.pdb
+diffmodeler	half/PDB/#63_rx185_ry211_rz41_tx98.064_ty93.390_tz101.012.pdb/occupancy	  0.93
+diffmodeler	half/PDB/pose	#64_rx21_ry99_rz163_tx97.603_ty91.020_tz100.118.pdb
+diffmodeler	half/PDB/#64_rx21_ry99_rz163_tx97.603_ty91.020_tz100.118.pdb/occupancy	  0.93
+diffmodeler	half/PDB/pose	#65_rx145_ry21_rz155_tx97.858_ty91.591_tz98.334.pdb
+diffmodeler	half/PDB/#65_rx145_ry21_rz155_tx97.858_ty91.591_tz98.334.pdb/occupancy	  0.93
+diffmodeler	half/PDB/pose	#66_rx205_ry229_rz35_tx98.056_ty91.224_tz101.095.pdb
+diffmodeler	half/PDB/#66_rx205_ry229_rz35_tx98.056_ty91.224_tz101.095.pdb/occupancy	  0.93
+diffmodeler	half/PDB/pose	#67_rx201_ry77_rz355_tx99.687_ty93.037_tz100.129.pdb
+diffmodeler	half/PDB/#67_rx201_ry77_rz355_tx99.687_ty93.037_tz100.129.pdb/occupancy	  0.93
+diffmodeler	half/PDB/pose	#68_rx21_ry103_rz175_tx99.687_ty93.037_tz100.129.pdb
+diffmodeler	half/PDB/#68_rx21_ry103_rz175_tx99.687_ty93.037_tz100.129.pdb/occupancy	  0.93
+diffmodeler	half/PDB/pose	#69_rx343_ry101_rz119_tx95.566_ty93.082_tz102.179.pdb
+diffmodeler	half/PDB/#69_rx343_ry101_rz119_tx95.566_ty93.082_tz102.179.pdb/occupancy	  0.93
+diffmodeler	half/PDB/pose	#70_rx153_ry15_rz143_tx97.965_ty91.555_tz100.286.pdb
+diffmodeler	half/PDB/#70_rx153_ry15_rz143_tx97.965_ty91.555_tz100.286.pdb/occupancy	  0.93
+diffmodeler	half/PDB/pose	#71_rx19_ry105_rz171_tx99.649_ty93.041_tz100.138.pdb
+diffmodeler	half/PDB/#71_rx19_ry105_rz171_tx99.649_ty93.041_tz100.138.pdb/occupancy	  0.93
+diffmodeler	half/PDB/pose	#72_rx5_ry285_rz169_tx95.261_ty89.194_tz105.030.pdb
+diffmodeler	half/PDB/#72_rx5_ry285_rz169_tx95.261_ty89.194_tz105.030.pdb/occupancy	  0.92
+diffmodeler	half/PDB/pose	#73_rx9_ry101_rz149_tx97.573_ty91.046_tz100.145.pdb
+diffmodeler	half/PDB/#73_rx9_ry101_rz149_tx97.573_ty91.046_tz100.145.pdb/occupancy	  0.92
+diffmodeler	half/PDB/pose	#74_rx113_ry45_rz23_tx95.560_ty93.835_tz106.340.pdb
+diffmodeler	half/PDB/#74_rx113_ry45_rz23_tx95.560_ty93.835_tz106.340.pdb/occupancy	  0.92
+diffmodeler	half/PDB/pose	#75_rx357_ry355_rz135_tx95.628_ty91.001_tz111.104.pdb
+diffmodeler	half/PDB/#75_rx357_ry355_rz135_tx95.628_ty91.001_tz111.104.pdb/occupancy	  0.92
+diffmodeler	half/PDB/pose	#76_rx169_ry215_rz51_tx97.928_ty91.471_tz102.907.pdb
+diffmodeler	half/PDB/#76_rx169_ry215_rz51_tx97.928_ty91.471_tz102.907.pdb/occupancy	  0.92
+diffmodeler	half/PDB/pose	#77_rx185_ry219_rz29_tx97.937_ty93.257_tz100.988.pdb
+diffmodeler	half/PDB/#77_rx185_ry219_rz29_tx97.937_ty93.257_tz100.988.pdb/occupancy	  0.92
+diffmodeler	half/PDB/pose	#78_rx15_ry289_rz165_tx95.335_ty89.128_tz101.041.pdb
+diffmodeler	half/PDB/#78_rx15_ry289_rz165_tx95.335_ty89.128_tz101.041.pdb/occupancy	  0.92
+diffmodeler	half/PDB/pose	#79_rx345_ry265_rz87_tx99.330_ty94.184_tz95.163.pdb
+diffmodeler	half/PDB/#79_rx345_ry265_rz87_tx99.330_ty94.184_tz95.163.pdb/occupancy	  0.92
+diffmodeler	half/PDB/pose	#80_rx161_ry245_rz5_tx97.332_ty91.313_tz102.929.pdb
+diffmodeler	half/PDB/#80_rx161_ry245_rz5_tx97.332_ty91.313_tz102.929.pdb/occupancy	  0.92
+diffmodeler	half/PDB/pose	#81_rx177_ry253_rz359_tx95.300_ty89.202_tz105.003.pdb
+diffmodeler	half/PDB/#81_rx177_ry253_rz359_tx95.300_ty89.202_tz105.003.pdb/occupancy	  0.92
+diffmodeler	half/PDB/pose	#82_rx319_ry131_rz119_tx97.635_ty91.459_tz98.364.pdb
+diffmodeler	half/PDB/#82_rx319_ry131_rz119_tx97.635_ty91.459_tz98.364.pdb/occupancy	  0.92
+diffmodeler	half/PDB/pose	#83_rx187_ry213_rz35_tx98.038_ty93.325_tz103.019.pdb
+diffmodeler	half/PDB/#83_rx187_ry213_rz35_tx98.038_ty93.325_tz103.019.pdb/occupancy	  0.92
+diffmodeler	half/PDB/pose	#84_rx351_ry97_rz135_tx97.655_ty91.044_tz100.141.pdb
+diffmodeler	half/PDB/#84_rx351_ry97_rz135_tx97.655_ty91.044_tz100.141.pdb/occupancy	  0.92
+diffmodeler	half/PDB/pose	#85_rx157_ry57_rz151_tx99.524_ty89.898_tz104.315.pdb
+diffmodeler	half/PDB/#85_rx157_ry57_rz151_tx99.524_ty89.898_tz104.315.pdb/occupancy	  0.92
+diffmodeler	half/PDB/pose	#86_rx150_ry60_rz140_tx99.494_ty89.889_tz104.314.pdb
+diffmodeler	half/PDB/#86_rx150_ry60_rz140_tx99.494_ty89.889_tz104.314.pdb/occupancy	  0.92
+diffmodeler	half/PDB/pose	#87_rx160_ry50_rz160_tx99.581_ty93.876_tz98.327.pdb
+diffmodeler	half/PDB/#87_rx160_ry50_rz160_tx99.581_ty93.876_tz98.327.pdb/occupancy	  0.92
+diffmodeler	half/PDB/pose	#88_rx301_ry249_rz127_tx99.286_ty92.269_tz99.358.pdb
+diffmodeler	half/PDB/#88_rx301_ry249_rz127_tx99.286_ty92.269_tz99.358.pdb/occupancy	  0.92
+diffmodeler	half/PDB/pose	#89_rx169_ry253_rz13_tx97.342_ty91.195_tz102.988.pdb
+diffmodeler	half/PDB/#89_rx169_ry253_rz13_tx97.342_ty91.195_tz102.988.pdb/occupancy	  0.92
+diffmodeler	half/PDB/pose	#90_rx169_ry49_rz163_tx99.637_ty91.940_tz96.298.pdb
+diffmodeler	half/PDB/#90_rx169_ry49_rz163_tx99.637_ty91.940_tz96.298.pdb/occupancy	  0.92
+diffmodeler	half/PDB/pose	#91_rx10_ry290_rz50_tx97.327_ty92.045_tz97.024.pdb
+diffmodeler	half/PDB/#91_rx10_ry290_rz50_tx97.327_ty92.045_tz97.024.pdb/occupancy	  0.91
+diffmodeler	half/PDB/pose	#92_rx35_ry83_rz147_tx97.415_ty93.007_tz86.068.pdb
+diffmodeler	half/PDB/#92_rx35_ry83_rz147_tx97.415_ty93.007_tz86.068.pdb/occupancy	  0.91
+diffmodeler	half/PDB/pose	#93_rx129_ry235_rz49_tx97.406_ty93.481_tz98.856.pdb
+diffmodeler	half/PDB/#93_rx129_ry235_rz49_tx97.406_ty93.481_tz98.856.pdb/occupancy	  0.91
+diffmodeler	half/PDB/pose	#94_rx267_ry245_rz159_tx99.230_ty92.229_tz99.331.pdb
+diffmodeler	half/PDB/#94_rx267_ry245_rz159_tx99.230_ty92.229_tz99.331.pdb/occupancy	  0.91
+diffmodeler	half/PDB/pose	#95_rx147_ry245_rz19_tx97.323_ty91.376_tz100.909.pdb
+diffmodeler	half/PDB/#95_rx147_ry245_rz19_tx97.323_ty91.376_tz100.909.pdb/occupancy	  0.91
+diffmodeler	half/PDB/pose	#96_rx220_ry260_rz20_tx97.833_ty91.040_tz105.113.pdb
+diffmodeler	half/PDB/#96_rx220_ry260_rz20_tx97.833_ty91.040_tz105.113.pdb/occupancy	  0.91
+diffmodeler	half/PDB/pose	#97_rx311_ry101_rz103_tx97.759_ty91.121_tz102.192.pdb
+diffmodeler	half/PDB/#97_rx311_ry101_rz103_tx97.759_ty91.121_tz102.192.pdb/occupancy	  0.91
+diffmodeler	half/PDB/pose	#98_rx30_ry110_rz10_tx97.512_ty92.180_tz104.111.pdb
+diffmodeler	half/PDB/#98_rx30_ry110_rz10_tx97.512_ty92.180_tz104.111.pdb/occupancy	  0.91
+diffmodeler	half/PDB/pose	#99_rx140_ry20_rz20_tx95.383_ty91.470_tz108.335.pdb
+diffmodeler	half/PDB/#99_rx140_ry20_rz20_tx95.383_ty91.470_tz108.335.pdb/occupancy	  0.91
+direct_fit	status	exit=0
+direct_fit	score.pkl	#0_rx333_ry1_rz125_tx95.733_ty91.089_tz109.029.pdb	949.8329
+direct_fit	score.pkl	#1_rx181_ry239_rz35_tx93.755_ty93.178_tz100.965.pdb	278.3691
+direct_fit	score.pkl	#2_rx185_ry245_rz357_tx93.423_ty93.146_tz104.994.pdb	259.3132
+direct_fit	score.pkl	#3_rx155_ry241_rz29_tx95.466_ty93.293_tz102.898.pdb	256.8833
+direct_fit	score.pkl	#4_rx355_ry125_rz149_tx95.491_ty93.213_tz98.266.pdb	254.8143
+direct_fit	PDB/pose	#0_rx333_ry1_rz125_tx95.733_ty91.089_tz109.029.pdb
+direct_fit	PDB/#0_rx333_ry1_rz125_tx95.733_ty91.089_tz109.029.pdb/occupancy	  9.50
+direct_fit	PDB/pose	#1_rx181_ry239_rz35_tx93.755_ty93.178_tz100.965.pdb
+direct_fit	PDB/#1_rx181_ry239_rz35_tx93.755_ty93.178_tz100.965.pdb/occupancy	  2.78
+direct_fit	PDB/pose	#2_rx185_ry245_rz357_tx93.423_ty93.146_tz104.994.pdb
+direct_fit	PDB/#2_rx185_ry245_rz357_tx93.423_ty93.146_tz104.994.pdb/occupancy	  2.59
+direct_fit	PDB/pose	#3_rx155_ry241_rz29_tx95.466_ty93.293_tz102.898.pdb
+direct_fit	PDB/#3_rx155_ry241_rz29_tx95.466_ty93.293_tz102.898.pdb/occupancy	  2.57
+direct_fit	PDB/pose	#4_rx355_ry125_rz149_tx95.491_ty93.213_tz98.266.pdb
+direct_fit	PDB/#4_rx355_ry125_rz149_tx95.491_ty93.213_tz98.266.pdb/occupancy	  2.55
+eval_half	status	exit=0
+eval_half	eval.json/overlap	0.3943
+eval_half	eval.json/cc	0.7036
+eval_half	eval.json/pcc	0.4664
+eval_half	eval.json/n	4750.0000
+eval_half	eval.json/total	12048.0000
+eval_half	eval.json/dot	4513.2261
+eval_half	eval.json/ref	map.mrc
+eval_half	eval.json/target	half.mrc
+eval_moved	status	exit=0
+eval_moved	eval.json/overlap	0.1067
+eval_moved	eval.json/cc	0.1739
+eval_moved	eval.json/pcc	0.0090
+eval_moved	eval.json/n	1619.0000
+eval_moved	eval.json/total	15179.0000
+eval_moved	eval.json/dot	88.3076
+eval_moved	eval.json/ref	map.mrc
+eval_moved	eval.json/target	moved.mrc
+half_alone	status	exit=0
+half_alone	score.pkl	#0_rx331_ry1_rz123_tx95.733_ty91.096_tz109.023.pdb	439.4529
+half_alone	score.pkl	#1_rx215_ry57_rz31_tx105.761_ty90.999_tz96.067.pdb	284.3013
+half_alone	score.pkl	#2_rx181_ry55_rz355_tx103.633_ty93.161_tz96.241.pdb	283.3736
+half_alone	score.pkl	#3_rx1_ry125_rz175_tx103.633_ty93.161_tz96.241.pdb	283.3736
+half_alone	score.pkl	#4_rx235_ry57_rz29_tx103.586_ty92.906_tz99.951.pdb	278.0503
+half_alone	PDB/pose	#0_rx331_ry1_rz123_tx95.733_ty91.096_tz109.023.pdb
+half_alone	PDB/#0_rx331_ry1_rz123_tx95.733_ty91.096_tz109.023.pdb/occupancy	  4.39
+half_alone	PDB/pose	#1_rx215_ry57_rz31_tx105.761_ty90.999_tz96.067.pdb
+half_alone	PDB/#1_rx215_ry57_rz31_tx105.761_ty90.999_tz96.067.pdb/occupancy	  2.84
+half_alone	PDB/pose	#2_rx181_ry55_rz355_tx103.633_ty93.161_tz96.241.pdb
+half_alone	PDB/#2_rx181_ry55_rz355_tx103.633_ty93.161_tz96.241.pdb/occupancy	  2.83
+half_alone	PDB/pose	#3_rx1_ry125_rz175_tx103.633_ty93.161_tz96.241.pdb
+half_alone	PDB/#3_rx1_ry125_rz175_tx103.633_ty93.161_tz96.241.pdb/occupancy	  2.83
+half_alone	PDB/pose	#4_rx235_ry57_rz29_tx103.586_ty92.906_tz99.951.pdb
+half_alone	PDB/#4_rx235_ry57_rz29_tx103.586_ty92.906_tz99.951.pdb/occupancy	  2.78
+ldp	status	exit=0
+ldp	score.pkl	#0_rx327_ry357_rz123_tx95.744_ty91.154_tz108.980.pdb	99.6063
+ldp	score.pkl	#1_rx145_ry243_rz85_tx93.673_ty93.278_tz98.896.pdb	95.8661
+ldp	score.pkl	#2_rx357_ry117_rz145_tx95.520_ty95.163_tz96.239.pdb	94.8819
+ldp	score.pkl	#3_rx181_ry243_rz35_tx93.719_ty93.153_tz100.975.pdb	94.8819
+ldp	score.pkl	#4_rx123_ry243_rz87_tx95.453_ty93.298_tz98.898.pdb	93.8976
+ldp	PDB/pose	#0_rx327_ry357_rz123_tx95.744_ty91.154_tz108.980.pdb
+ldp	PDB/#0_rx327_ry357_rz123_tx95.744_ty91.154_tz108.980.pdb/occupancy	  1.00
+ldp	PDB/pose	#1_rx145_ry243_rz85_tx93.673_ty93.278_tz98.896.pdb
+ldp	PDB/#1_rx145_ry243_rz85_tx93.673_ty93.278_tz98.896.pdb/occupancy	  0.96
+ldp	PDB/pose	#2_rx357_ry117_rz145_tx95.520_ty95.163_tz96.239.pdb
+ldp	PDB/#2_rx357_ry117_rz145_tx95.520_ty95.163_tz96.239.pdb/occupancy	  0.95
+ldp	PDB/pose	#3_rx181_ry243_rz35_tx93.719_ty93.153_tz100.975.pdb
+ldp	PDB/#3_rx181_ry243_rz35_tx93.719_ty93.153_tz100.975.pdb/occupancy	  0.95
+ldp	PDB/pose	#4_rx123_ry243_rz87_tx95.453_ty93.298_tz98.898.pdb
+ldp	PDB/#4_rx123_ry243_rz87_tx95.453_ty93.298_tz98.898.pdb/occupancy	  0.94
+local_fit	status	exit=0
+local_fit	score.pkl	#0_rx358_ry340_rz5_tx95.263_ty91.984_tz99.013.pdb	92.3228
+local_fit	PDB/pose	#0_rx358_ry340_rz5_tx95.263_ty91.984_tz99.013.pdb
+local_fit	PDB/#0_rx358_ry340_rz5_tx95.263_ty91.984_tz99.013.pdb/occupancy	  0.92
+multi_map	status	exit=0
+multi_map	full/score.pkl	#0_rx333_ry1_rz125_tx95.733_ty91.089_tz109.029.pdb	949.8329
+multi_map	full/score.pkl	#1_rx181_ry239_rz35_tx93.755_ty93.178_tz100.965.pdb	278.3691
+multi_map	full/score.pkl	#2_rx185_ry245_rz357_tx93.423_ty93.146_tz104.994.pdb	259.3132
+multi_map	full/score.pkl	#3_rx155_ry241_rz29_tx95.466_ty93.293_tz102.898.pdb	256.8833
+multi_map	full/score.pkl	#4_rx355_ry125_rz149_tx95.491_ty93.213_tz98.266.pdb	254.8143
+multi_map	full/PDB/pose	#0_rx333_ry1_rz125_tx95.733_ty91.089_tz109.029.pdb
+multi_map	full/PDB/#0_rx333_ry1_rz125_tx95.733_ty91.089_tz109.029.pdb/occupancy	  9.50
+multi_map	full/PDB/pose	#1_rx181_ry239_rz35_tx93.755_ty93.178_tz100.965.pdb
+multi_map	full/PDB/#1_rx181_ry239_rz35_tx93.755_ty93.178_tz100.965.pdb/occupancy	  2.78
+multi_map	full/PDB/pose	#2_rx185_ry245_rz357_tx93.423_ty93.146_tz104.994.pdb
+multi_map	full/PDB/#2_rx185_ry245_rz357_tx93.423_ty93.146_tz104.994.pdb/occupancy	  2.59
+multi_map	full/PDB/pose	#3_rx155_ry241_rz29_tx95.466_ty93.293_tz102.898.pdb
+multi_map	full/PDB/#3_rx155_ry241_rz29_tx95.466_ty93.293_tz102.898.pdb/occupancy	  2.57
+multi_map	full/PDB/pose	#4_rx355_ry125_rz149_tx95.491_ty93.213_tz98.266.pdb
+multi_map	full/PDB/#4_rx355_ry125_rz149_tx95.491_ty93.213_tz98.266.pdb/occupancy	  2.55
+multi_map	half/score.pkl	#0_rx331_ry1_rz123_tx95.733_ty91.096_tz109.023.pdb	439.4529
+multi_map	half/score.pkl	#1_rx215_ry57_rz31_tx105.761_ty90.999_tz96.067.pdb	284.3013
+multi_map	half/score.pkl	#2_rx181_ry55_rz355_tx103.633_ty93.161_tz96.241.pdb	283.3736
+multi_map	half/score.pkl	#3_rx1_ry125_rz175_tx103.633_ty93.161_tz96.241.pdb	283.3736
+multi_map	half/score.pkl	#4_rx235_ry57_rz29_tx103.586_ty92.906_tz99.951.pdb	278.0503
+multi_map	half/PDB/pose	#0_rx331_ry1_rz123_tx95.733_ty91.096_tz109.023.pdb
+multi_map	half/PDB/#0_rx331_ry1_rz123_tx95.733_ty91.096_tz109.023.pdb/occupancy	  4.39
+multi_map	half/PDB/pose	#1_rx215_ry57_rz31_tx105.761_ty90.999_tz96.067.pdb
+multi_map	half/PDB/#1_rx215_ry57_rz31_tx105.761_ty90.999_tz96.067.pdb/occupancy	  2.84
+multi_map	half/PDB/pose	#2_rx181_ry55_rz355_tx103.633_ty93.161_tz96.241.pdb
+multi_map	half/PDB/#2_rx181_ry55_rz355_tx103.633_ty93.161_tz96.241.pdb/occupancy	  2.83
+multi_map	half/PDB/pose	#3_rx1_ry125_rz175_tx103.633_ty93.161_tz96.241.pdb
+multi_map	half/PDB/#3_rx1_ry125_rz175_tx103.633_ty93.161_tz96.241.pdb/occupancy	  2.83
+multi_map	half/PDB/pose	#4_rx235_ry57_rz29_tx103.586_ty92.906_tz99.951.pdb
+multi_map	half/PDB/#4_rx235_ry57_rz29_tx103.586_ty92.906_tz99.951.pdb/occupancy	  2.78
+nodup	status	exit=0
+nodup	score.pkl	#0_rx331_ry1_rz123_tx95.733_ty91.096_tz109.023.pdb	2606.3837
+nodup	score.pkl	#1_rx35_ry359_rz5_tx91.067_ty96.154_tz111.481.pdb	355.2741
+nodup	score.pkl	#2_rx181_ry355_rz359_tx95.072_ty93.175_tz99.982.pdb	283.7298
+nodup	score.pkl	#3_rx295_ry245_rz151_tx93.072_ty94.135_tz103.401.pdb	278.7333
+nodup	score.pkl	#4_rx179_ry237_rz357_tx95.473_ty93.187_tz104.953.pdb	271.4301
+nodup	score.pkl	#5_rx29_ry299_rz355_tx91.567_ty90.189_tz85.093.pdb	268.5596
+nodup	score.pkl	#6_rx359_ry329_rz359_tx83.419_ty90.022_tz86.973.pdb	230.4683
+nodup	score.pkl	#7_rx205_ry205_rz91_tx94.164_ty91.960_tz103.203.pdb	220.6615
+nodup	score.pkl	#8_rx115_ry301_rz153_tx94.161_ty85.076_tz109.478.pdb	198.7691
+nodup	score.pkl	#9_rx213_ry241_rz147_tx89.822_ty98.164_tz103.113.pdb	190.2034
+nodup	PDB/pose	#0_rx331_ry1_rz123_tx95.733_ty91.096_tz109.023.pdb
+nodup	PDB/#0_rx331_ry1_rz123_tx95.733_ty91.096_tz109.023.pdb/occupancy	 26.06
+nodup	PDB/pose	#1_rx35_ry359_rz5_tx91.067_ty96.154_tz111.481.pdb
+nodup	PDB/#1_rx35_ry359_rz5_tx91.067_ty96.154_tz111.481.pdb/occupancy	  3.55
+nodup	PDB/pose	#2_rx181_ry355_rz359_tx95.072_ty93.175_tz99.982.pdb
+nodup	PDB/#2_rx181_ry355_rz359_tx95.072_ty93.175_tz99.982.pdb/occupancy	  2.84
+nodup	PDB/pose	#3_rx295_ry245_rz151_tx93.072_ty94.135_tz103.401.pdb
+nodup	PDB/#3_rx295_ry245_rz151_tx93.072_ty94.135_tz103.401.pdb/occupancy	  2.79
+nodup	PDB/pose	#4_rx179_ry237_rz357_tx95.473_ty93.187_tz104.953.pdb
+nodup	PDB/#4_rx179_ry237_rz357_tx95.473_ty93.187_tz104.953.pdb/occupancy	  2.71
+nodup	PDB/pose	#5_rx29_ry299_rz355_tx91.567_ty90.189_tz85.093.pdb
+nodup	PDB/#5_rx29_ry299_rz355_tx91.567_ty90.189_tz85.093.pdb/occupancy	  2.69
+nodup	PDB/pose	#6_rx359_ry329_rz359_tx83.419_ty90.022_tz86.973.pdb
+nodup	PDB/#6_rx359_ry329_rz359_tx83.419_ty90.022_tz86.973.pdb/occupancy	  2.30
+nodup	PDB/pose	#7_rx205_ry205_rz91_tx94.164_ty91.960_tz103.203.pdb
+nodup	PDB/#7_rx205_ry205_rz91_tx94.164_ty91.960_tz103.203.pdb/occupancy	  2.21
+nodup	PDB/pose	#8_rx115_ry301_rz153_tx94.161_ty85.076_tz109.478.pdb
+nodup	PDB/#8_rx115_ry301_rz153_tx94.161_ty85.076_tz109.478.pdb/occupancy	  1.99
+nodup	PDB/pose	#9_rx213_ry241_rz147_tx89.822_ty98.164_tz103.113.pdb
+nodup	PDB/#9_rx213_ry241_rz147_tx89.822_ty98.164_tz103.113.pdb/occupancy	  1.90
+pdbin_cif	status	exit=0
+pdbin_cif	score.pkl	#0_rx331_ry1_rz123_tx95.733_ty91.096_tz109.023.pdb	2606.3837
+pdbin_cif	score.pkl	#1_rx181_ry355_rz359_tx95.072_ty93.175_tz99.982.pdb	283.7298
+pdbin_cif	score.pkl	#2_rx1_ry185_rz179_tx95.072_ty93.175_tz99.982.pdb	283.7298
+pdbin_cif	score.pkl	#3_rx179_ry237_rz357_tx95.473_ty93.187_tz104.953.pdb	271.4301
+pdbin_cif	score.pkl	#4_rx359_ry329_rz359_tx83.419_ty90.022_tz86.973.pdb	230.4683
+pdbin_cif	PDB/pose	#0_rx331_ry1_rz123_tx95.733_ty91.096_tz109.023.pdb
+pdbin_cif	PDB/#0_rx331_ry1_rz123_tx95.733_ty91.096_tz109.023.pdb/occupancy	 26.06
+pdbin_cif	PDB/pose	#1_rx181_ry355_rz359_tx95.072_ty93.175_tz99.982.pdb
+pdbin_cif	PDB/#1_rx181_ry355_rz359_tx95.072_ty93.175_tz99.982.pdb/occupancy	  2.84
+pdbin_cif	PDB/pose	#2_rx1_ry185_rz179_tx95.072_ty93.175_tz99.982.pdb
+pdbin_cif	PDB/#2_rx1_ry185_rz179_tx95.072_ty93.175_tz99.982.pdb/occupancy	  2.84
+pdbin_cif	PDB/pose	#3_rx179_ry237_rz357_tx95.473_ty93.187_tz104.953.pdb
+pdbin_cif	PDB/#3_rx179_ry237_rz357_tx95.473_ty93.187_tz104.953.pdb/occupancy	  2.71
+pdbin_cif	PDB/pose	#4_rx359_ry329_rz359_tx83.419_ty90.022_tz86.973.pdb
+pdbin_cif	PDB/#4_rx359_ry329_rz359_tx83.419_ty90.022_tz86.973.pdb/occupancy	  2.30
+refine_R1	status	exit=0
+refine_R1	score.pkl	#0_rx331_ry2_rz124_tx95.747_ty91.090_tz109.031.pdb	2631.2735
+refine_R1	score.pkl	#1_rx175_ry240_rz3_tx83.457_ty83.205_tz84.946.pdb	287.9722
+refine_R1	score.pkl	#2_rx181_ry355_rz359_tx95.072_ty93.175_tz99.982.pdb	283.7298
+refine_R1	score.pkl	#3_rx1_ry185_rz179_tx95.072_ty93.175_tz99.982.pdb	283.7298
+refine_R1	score.pkl	#4_rx359_ry330_rz2_tx83.386_ty90.012_tz86.976.pdb	249.0709
+refine_R1	PDB/pose	#0_rx331_ry2_rz124_tx95.747_ty91.090_tz109.031.pdb
+refine_R1	PDB/#0_rx331_ry2_rz124_tx95.747_ty91.090_tz109.031.pdb/occupancy	 26.31
+refine_R1	PDB/pose	#1_rx175_ry240_rz3_tx83.457_ty83.205_tz84.946.pdb
+refine_R1	PDB/#1_rx175_ry240_rz3_tx83.457_ty83.205_tz84.946.pdb/occupancy	  2.88
+refine_R1	PDB/pose	#2_rx181_ry355_rz359_tx95.072_ty93.175_tz99.982.pdb
+refine_R1	PDB/#2_rx181_ry355_rz359_tx95.072_ty93.175_tz99.982.pdb/occupancy	  2.84
+refine_R1	PDB/pose	#3_rx1_ry185_rz179_tx95.072_ty93.175_tz99.982.pdb
+refine_R1	PDB/#3_rx1_ry185_rz179_tx95.072_ty93.175_tz99.982.pdb/occupancy	  2.84
+refine_R1	PDB/pose	#4_rx359_ry330_rz2_tx83.386_ty90.012_tz86.976.pdb
+refine_R1	PDB/#4_rx359_ry330_rz2_tx83.386_ty90.012_tz86.976.pdb/occupancy	  2.49
+search_C	status	exit=0
+search_C	score.pkl	#0_rx333_ry1_rz125_tx95.733_ty91.089_tz109.029.pdb	949.8329
+search_C	score.pkl	#1_rx181_ry239_rz35_tx93.755_ty93.178_tz100.965.pdb	278.3691
+search_C	score.pkl	#2_rx185_ry245_rz357_tx93.423_ty93.146_tz104.994.pdb	259.3132
+search_C	score.pkl	#3_rx155_ry241_rz29_tx95.466_ty93.293_tz102.898.pdb	256.8833
+search_C	score.pkl	#4_rx355_ry125_rz149_tx95.491_ty93.213_tz98.266.pdb	254.8143
+search_C	PDB/pose	#0_rx333_ry1_rz125_tx95.733_ty91.089_tz109.029.pdb
+search_C	PDB/#0_rx333_ry1_rz125_tx95.733_ty91.089_tz109.029.pdb/occupancy	  9.50
+search_C	PDB/pose	#1_rx181_ry239_rz35_tx93.755_ty93.178_tz100.965.pdb
+search_C	PDB/#1_rx181_ry239_rz35_tx93.755_ty93.178_tz100.965.pdb/occupancy	  2.78
+search_C	PDB/pose	#2_rx185_ry245_rz357_tx93.423_ty93.146_tz104.994.pdb
+search_C	PDB/#2_rx185_ry245_rz357_tx93.423_ty93.146_tz104.994.pdb/occupancy	  2.59
+search_C	PDB/pose	#3_rx155_ry241_rz29_tx95.466_ty93.293_tz102.898.pdb
+search_C	PDB/#3_rx155_ry241_rz29_tx95.466_ty93.293_tz102.898.pdb/occupancy	  2.57
+search_C	PDB/pose	#4_rx355_ry125_rz149_tx95.491_ty93.213_tz98.266.pdb
+search_C	PDB/#4_rx355_ry125_rz149_tx95.491_ty93.213_tz98.266.pdb/occupancy	  2.55
+search_L	status	exit=0
+search_L	score.pkl	#0_rx333_ry1_rz123_tx95.716_ty91.085_tz109.029.pdb	3062.2192
+search_L	score.pkl	#1_rx59_ry185_rz125_tx100.846_ty83.646_tz109.416.pdb	379.2766
+search_L	score.pkl	#2_rx155_ry209_rz5_tx101.763_ty95.410_tz84.864.pdb	210.3980
+search_L	score.pkl	#3_rx303_ry29_rz121_tx102.079_ty97.057_tz109.316.pdb	203.3172
+search_L	score.pkl	#4_rx209_ry213_rz119_tx99.959_ty98.156_tz93.192.pdb	199.2464
+search_L	PDB/pose	#0_rx333_ry1_rz123_tx95.716_ty91.085_tz109.029.pdb
+search_L	PDB/#0_rx333_ry1_rz123_tx95.716_ty91.085_tz109.029.pdb/occupancy	 30.62
+search_L	PDB/pose	#1_rx59_ry185_rz125_tx100.846_ty83.646_tz109.416.pdb
+search_L	PDB/#1_rx59_ry185_rz125_tx100.846_ty83.646_tz109.416.pdb/occupancy	  3.79
+search_L	PDB/pose	#2_rx155_ry209_rz5_tx101.763_ty95.410_tz84.864.pdb
+search_L	PDB/#2_rx155_ry209_rz5_tx101.763_ty95.410_tz84.864.pdb/occupancy	  2.10
+search_L	PDB/pose	#3_rx303_ry29_rz121_tx102.079_ty97.057_tz109.316.pdb
+search_L	PDB/#3_rx303_ry29_rz121_tx102.079_ty97.057_tz109.316.pdb/occupancy	  2.03
+search_L	PDB/pose	#4_rx209_ry213_rz119_tx99.959_ty98.156_tz93.192.pdb
+search_L	PDB/#4_rx209_ry213_rz119_tx99.959_ty98.156_tz93.192.pdb/occupancy	  1.99
+search_O	status	exit=0
+search_O	score.pkl	#0_rx175_ry239_rz55_tx93.830_ty93.253_tz98.943.pdb	309.8657
+search_O	score.pkl	#1_rx175_ry245_rz35_tx95.642_ty93.156_tz98.963.pdb	281.8965
+search_O	score.pkl	#2_rx153_ry237_rz65_tx95.672_ty93.321_tz98.878.pdb	280.4242
+search_O	score.pkl	#3_rx175_ry63_rz357_tx95.777_ty93.203_tz102.245.pdb	276.0080
+search_O	score.pkl	#4_rx355_ry117_rz177_tx95.777_ty93.203_tz102.245.pdb	276.0080
+search_O	PDB/pose	#0_rx175_ry239_rz55_tx93.830_ty93.253_tz98.943.pdb
+search_O	PDB/#0_rx175_ry239_rz55_tx93.830_ty93.253_tz98.943.pdb/occupancy	  3.10
+search_O	PDB/pose	#1_rx175_ry245_rz35_tx95.642_ty93.156_tz98.963.pdb
+search_O	PDB/#1_rx175_ry245_rz35_tx95.642_ty93.156_tz98.963.pdb/occupancy	  2.82
+search_O	PDB/pose	#2_rx153_ry237_rz65_tx95.672_ty93.321_tz98.878.pdb
+search_O	PDB/#2_rx153_ry237_rz65_tx95.672_ty93.321_tz98.878.pdb/occupancy	  2.80
+search_O	PDB/pose	#3_rx175_ry63_rz357_tx95.777_ty93.203_tz102.245.pdb
+search_O	PDB/#3_rx175_ry63_rz357_tx95.777_ty93.203_tz102.245.pdb/occupancy	  2.76
+search_O	PDB/pose	#4_rx355_ry117_rz177_tx95.777_ty93.203_tz102.245.pdb
+search_O	PDB/#4_rx355_ry117_rz177_tx95.777_ty93.203_tz102.245.pdb/occupancy	  2.76
+search_P	status	exit=0
+search_P	score.pkl	#0_rx333_ry1_rz123_tx95.716_ty91.085_tz109.029.pdb	1961.1206
+search_P	score.pkl	#1_rx273_ry267_rz355_tx94.036_ty87.150_tz109.139.pdb	501.9647
+search_P	score.pkl	#2_rx3_ry125_rz149_tx97.419_ty93.185_tz96.232.pdb	331.3624
+search_P	score.pkl	#3_rx331_ry357_rz93_tx97.461_ty93.139_tz110.990.pdb	308.1911
+search_P	score.pkl	#4_rx355_ry327_rz29_tx97.280_ty91.866_tz106.943.pdb	296.7789
+search_P	PDB/pose	#0_rx333_ry1_rz123_tx95.716_ty91.085_tz109.029.pdb
+search_P	PDB/#0_rx333_ry1_rz123_tx95.716_ty91.085_tz109.029.pdb/occupancy	 19.61
+search_P	PDB/pose	#1_rx273_ry267_rz355_tx94.036_ty87.150_tz109.139.pdb
+search_P	PDB/#1_rx273_ry267_rz355_tx94.036_ty87.150_tz109.139.pdb/occupancy	  5.02
+search_P	PDB/pose	#2_rx3_ry125_rz149_tx97.419_ty93.185_tz96.232.pdb
+search_P	PDB/#2_rx3_ry125_rz149_tx97.419_ty93.185_tz96.232.pdb/occupancy	  3.31
+search_P	PDB/pose	#3_rx331_ry357_rz93_tx97.461_ty93.139_tz110.990.pdb
+search_P	PDB/#3_rx331_ry357_rz93_tx97.461_ty93.139_tz110.990.pdb/occupancy	  3.08
+search_P	PDB/pose	#4_rx355_ry327_rz29_tx97.280_ty91.866_tz106.943.pdb
+search_P	PDB/#4_rx355_ry327_rz29_tx97.280_ty91.866_tz106.943.pdb/occupancy	  2.97
+search_V	status	exit=0
+search_V	score.pkl	#0_rx331_ry1_rz123_tx95.733_ty91.096_tz109.023.pdb	2606.3837
+search_V	score.pkl	#1_rx181_ry355_rz359_tx95.072_ty93.175_tz99.982.pdb	283.7298
+search_V	score.pkl	#2_rx1_ry185_rz179_tx95.072_ty93.175_tz99.982.pdb	283.7298
+search_V	score.pkl	#3_rx179_ry237_rz357_tx95.473_ty93.187_tz104.953.pdb	271.4301
+search_V	score.pkl	#4_rx359_ry329_rz359_tx83.419_ty90.022_tz86.973.pdb	230.4683
+search_V	PDB/pose	#0_rx331_ry1_rz123_tx95.733_ty91.096_tz109.023.pdb
+search_V	PDB/#0_rx331_ry1_rz123_tx95.733_ty91.096_tz109.023.pdb/occupancy	 26.06
+search_V	PDB/pose	#1_rx181_ry355_rz359_tx95.072_ty93.175_tz99.982.pdb
+search_V	PDB/#1_rx181_ry355_rz359_tx95.072_ty93.175_tz99.982.pdb/occupancy	  2.84
+search_V	PDB/pose	#2_rx1_ry185_rz179_tx95.072_ty93.175_tz99.982.pdb
+search_V	PDB/#2_rx1_ry185_rz179_tx95.072_ty93.175_tz99.982.pdb/occupancy	  2.84
+search_V	PDB/pose	#3_rx179_ry237_rz357_tx95.473_ty93.187_tz104.953.pdb
+search_V	PDB/#3_rx179_ry237_rz357_tx95.473_ty93.187_tz104.953.pdb/occupancy	  2.71
+search_V	PDB/pose	#4_rx359_ry329_rz359_tx83.419_ty90.022_tz86.973.pdb
+search_V	PDB/#4_rx359_ry329_rz359_tx83.419_ty90.022_tz86.973.pdb/occupancy	  2.30
+vectors	status	exit=0
+vectors	vectors/ref_map_coords.npy	shape=(8396, 3) sum=2370330.7135
+vectors	vectors/ref_map_vecs.npy	shape=(8396, 3) sum=-1576.5947
+vectors	vectors/tgt_map_coords.npy	shape=(12820, 3) sum=30593.6176
+vectors	vectors/tgt_map_vecs.npy	shape=(12820, 3) sum=-1064.7312
