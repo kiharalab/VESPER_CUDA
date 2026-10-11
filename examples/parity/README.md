@@ -46,6 +46,15 @@ the map: `-a map.mrc -t 0.0289 -b model.pdb -T 0.01 -res 5 -s 2 -g 2 -A 30 -N 5 
 | `diffmodeler` | `-a map.mrc,half.mrc -labels full,half -t 0.05 -T 0.01 -g 2 -s 2 -A 10 -N 100 -M C -ldp ldp.pdb -ca ca.pdb -res 1.0 -c 8` | DiffModeler's global fit of one chain (its `config/diffmodeler.json`) | |
 | `cpu` | no `-gpu`, `-s 4 -M V` | the CPU search (FFTW planned without timing: same result on every run) | |
 
+## The Python API
+
+`api_examples.py OUT_DIR [GPU_ID] [EXAMPLE...]` (after `run_all.sh`, which writes the inputs) runs
+`search_V`, `search_C`, `nodup`, `multi_map`, `ldp`, `direct_fit`, `local_fit` and `diffmodeler`
+through `vesper.api.fit` and writes each pose from the returned transform as `vesper orig` would,
+into `OUT_DIR/api_<example>/`. What must hold: `api_<example>` has the same rows as `<example>` in
+the summary table (on the reference run the pose files are also byte-identical). Another engine's
+API is checked by swapping the `fit` import.
+
 ## Inputs
 
 `make_inputs.py` writes them from the shipped files:
@@ -60,8 +69,10 @@ the map: `-a map.mrc -t 0.0289 -b model.pdb -T 0.01 -res 5 -s 2 -g 2 -A 30 -N 5 
 
 ## Reference run
 
-`reference_summary.tsv` is `summarize.py` on a run of commit 8e464fa on an RTX A6000 (torch 2.10,
-CUDA 13.0): every example exits 0, and every row of "What must hold" holds. Seconds per example:
+`reference_summary.tsv` is `summarize.py` on a run on an RTX A6000 (torch 2.10, CUDA 13.0) of the
+CLI examples at 8e464fa and the API examples at the commit that added `vesper.api.fit`. Every
+example exits 0, every row of "What must hold" holds, and every `api_<example>` equals `<example>`.
+Seconds per example:
 
 | search_V | search_C | search_P | search_O | search_L | refine_R1 | nodup | pdbin_cif | batch_3 | multi_map |
 |---|---|---|---|---|---|---|---|---|---|
@@ -70,3 +81,9 @@ CUDA 13.0): every example exits 0, and every row of "What must hold" holds. Seco
 | half_alone | ldp | direct_fit | local_fit | eval_half | eval_moved | vectors | diffmodeler | cpu |
 |---|---|---|---|---|---|---|---|---|
 | 28 | 69 | 32 | 159 | 26 | 23 | 27 | 236 | 36 |
+
+Through the API (the CLI's `-pdbin` files included):
+
+| api_search_V | api_search_C | api_nodup | api_multi_map | api_ldp | api_direct_fit | api_local_fit | api_diffmodeler |
+|---|---|---|---|---|---|---|---|
+| 19 | 7 | 10 | 11 | 10 | 7 | 143 | 199 |
