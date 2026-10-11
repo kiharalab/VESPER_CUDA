@@ -30,8 +30,13 @@ CASES = {
 NORMALIZED = re.compile(r"Normalized Score= (\S+)")
 
 
+NUMPY_INT = re.compile(r"np\.int64\((-?\d+)\)")
+
+
 def normalize(stdout, directory):
-    """Drop the command line and the timing, and name the run folder <DIR>."""
+    """Drop the command line and the timing, name the run folder <DIR>, and print numpy ints as
+    numpy 1 does ("17", not numpy 2's "np.int64(17)")."""
+    stdout = NUMPY_INT.sub(r"\1", stdout)
     for path in sorted({os.path.realpath(directory), str(directory)}, key=len)[::-1]:
         stdout = stdout.replace(path, "<DIR>")
     lines = stdout.split("\n")
@@ -55,7 +60,7 @@ def run(directory, args):
 
 def golden(case):
     with open(os.path.join(GOLDEN, case, "stdout.txt")) as f:
-        return f.read()
+        return NUMPY_INT.sub(r"\1", f.read())
 
 
 def check_poses(out_dir, case, printout):
@@ -87,7 +92,9 @@ def check_poses(out_dir, case, printout):
         for line, golden_line in zip(lines, golden_lines):
             if line.startswith(("ATOM", "HETATM")):
                 assert line[54:60] == occupancy
-                assert line[:54] + line[60:] == golden_line[:54] + golden_line[60:]
+                assert line[:54] + line[60:66] == golden_line[:54] + golden_line[60:66]
+                # element and charge: Biopython 1.84 right-justifies the element, later ones do not
+                assert line[66:].split() == golden_line[66:].split()
             else:
                 assert line == golden_line
 
