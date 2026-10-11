@@ -6,7 +6,6 @@ import tempfile
 import time
 from enum import Enum
 
-import click
 import numpy as np
 import typer
 
@@ -51,27 +50,27 @@ def validate_ref_args(
     """
     ref_paths = [s for s in maps.split(",") if s]
     if len(ref_paths) == 0:
-        raise click.UsageError("Empty -a")
+        raise typer.BadParameter("Empty -a")
     ref_labels = [s for s in labels.split(",") if s] if labels else None
     if len(ref_paths) >= 2 and not labels:
-        raise click.UsageError("-labels required when -a has multiple paths")
+        raise typer.BadParameter("-labels required when -a has multiple paths")
     if labels and len(ref_labels) != len(ref_paths):
-        raise click.UsageError(
+        raise typer.BadParameter(
             f"-labels has {len(ref_labels)} entries but -a has {len(ref_paths)} refs"
         )
     if labels:
         bad = [s for s in ref_labels if "/" in s or ".." in s or s == "."]
         if bad:
-            raise click.UsageError(
+            raise typer.BadParameter(
                 f"-labels must not contain '/' or '..', or be '.': {bad}"
             )
         if len(set(ref_labels)) != len(ref_labels):
-            raise click.UsageError(f"-labels must be unique; got {ref_labels}")
+            raise typer.BadParameter(f"-labels must be unique; got {ref_labels}")
     if direct_fit and (ldp or ca):
-        raise click.UsageError("-ldp/-ca incompatible with --direct_fit")
+        raise typer.BadParameter("-ldp/-ca incompatible with --direct_fit")
     ldp_paths = [s for s in ldp.split(",") if s] if ldp else None
     if ldp and len(ldp_paths) not in (1, len(ref_paths)):
-        raise click.UsageError(
+        raise typer.BadParameter(
             f"-ldp must have 1 entry or {len(ref_paths)} entries; got {len(ldp_paths)}"
         )
     return ref_paths, ref_labels, ldp_paths
@@ -109,21 +108,23 @@ def validate_search_args(
 ) -> None:
     """Reject values that leave the search with nothing to do or nothing to write"""
     if not math.isfinite(angle_spacing) or angle_spacing <= 0:
-        raise click.UsageError(
+        raise typer.BadParameter(
             f"-A (angle spacing) must be finite and > 0; got {angle_spacing}"
         )
     if refine_top < 1:
-        raise click.UsageError(f"-N (models to refine) must be >= 1; got {refine_top}")
+        raise typer.BadParameter(
+            f"-N (models to refine) must be >= 1; got {refine_top}"
+        )
     if batch_size is not None and batch_size < 1:
-        raise click.UsageError(f"-batch must be >= 1; got {batch_size}")
+        raise typer.BadParameter(f"-batch must be >= 1; got {batch_size}")
     if angle_limit is not None and not (
         math.isfinite(angle_limit) and angle_limit >= 0
     ):
-        raise click.UsageError(
+        raise typer.BadParameter(
             f"-al (angle limit) must be finite and >= 0; got {angle_limit}"
         )
     if pdbin and not os.path.exists(pdbin):
-        raise click.UsageError(f"-pdbin {pdbin} does not exist")
+        raise typer.BadParameter(f"-pdbin {pdbin} does not exist")
 
 
 def validate_input_files(
@@ -135,14 +136,14 @@ def validate_input_files(
 ) -> None:
     """Reject a missing -b, -ldp or -ca file, or a structure -b without -res"""
     if not os.path.exists(target):
-        raise click.UsageError(f"-b {target} does not exist")
+        raise typer.BadParameter(f"-b {target} does not exist")
     if get_file_extension(target)[0] in ["pdb", "cif"] and resolution is None:
-        raise click.UsageError("-res is required when -b is a structure")
+        raise typer.BadParameter("-res is required when -b is a structure")
     if bool(ldp_file) != bool(ca_file):
-        raise click.UsageError("-ldp and -ca must be given together")
+        raise typer.BadParameter("-ldp and -ca must be given together")
     for path in [*(ldp_paths or []), *([ca_file] if ca_file else [])]:
         if not os.path.exists(path):
-            raise click.UsageError(f"{path} does not exist (-ldp/-ca)")
+            raise typer.BadParameter(f"{path} does not exist (-ldp/-ca)")
 
 
 def check_ref_paths_exist(ref_paths: list[str]) -> None:
@@ -160,13 +161,13 @@ def check_ref_grids(ref_maps: list[EMmap], voxel_spacing: float) -> None:
     ref0 = ref_maps[0]
     for i, ref_map in enumerate(ref_maps[1:], start=1):
         if not np.allclose(ref_map.new_cent, ref0.new_cent, atol=0.5 * voxel_spacing):
-            raise click.UsageError(
+            raise typer.BadParameter(
                 f"ref {i} is centred differently from ref 0 by more than half a search "
                 f"voxel ({ref_map.new_cent} vs {ref0.new_cent}): multiple -a maps must "
                 "share one grid"
             )
         if ref_map.xwidth != ref0.xwidth:
-            raise click.UsageError(
+            raise typer.BadParameter(
                 f"ref {i} has voxel size {ref_map.xwidth} but ref 0 has {ref0.xwidth}: "
                 "multiple -a maps must share one grid"
             )
