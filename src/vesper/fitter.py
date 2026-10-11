@@ -129,6 +129,7 @@ class MapFitter:
         self.result_list = None
         self.refined_list = None
         self.final_list = None
+        self.fit_scores = None
         self.score_ave = None
         self.score_std = None
         self.alpha = alpha
@@ -680,8 +681,9 @@ class MapFitter:
     def fit(self):
         """Search every map with each rotation of the target, then finish each map on its own
 
-        The final poses of map i are in final_lists[i]; result_list, final_list and the score
-        statistics are left at the last map's.
+        The final poses of map i are in final_lists[i] and their DiffModeler fit scores in
+        fit_score_lists[i]; result_list, final_list and the score statistics are left at
+        the last map's.
         """
         print("###Start Searching###")
         ref_ids = range(len(self.ref_maps))
@@ -768,12 +770,14 @@ class MapFitter:
                         self._add_search_results(search_lists, rot_ang, map_results)
 
         self.final_lists = []
+        self.fit_score_lists = []
         for ref_index, result_list in enumerate(search_lists):
             self.ref_index = ref_index
             self.result_list = result_list
             self.refined_list = None
             self._finish_selected_map()
             self.final_lists.append(self.final_list)
+            self.fit_score_lists.append(self.fit_scores)
 
     def _add_search_results(self, search_lists, rot_ang, map_results):
         """Append a rotation's best translation in each map to that map's result list"""
@@ -840,11 +844,11 @@ class MapFitter:
         for i, item in enumerate(self.final_list):
             self._print_result_item(item, i)
 
+        self.fit_scores = dm_fit_scores(self.final_list, self.score_ave, self.score_std)
+
         # save rotated pdb structure for visualization, with DiffModeler's fit scores
         if self.input_pdb is not None:
-            self._save_topn_pdb(
-                dm_fit_scores(self.final_list, self.score_ave, self.score_std)
-            )
+            self._save_topn_pdb(self.fit_scores)
 
         # save vectors as pdb for visualization
         if self.save_vec:
