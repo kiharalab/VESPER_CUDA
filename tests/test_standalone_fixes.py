@@ -6,9 +6,9 @@ import shutil
 from math import inf, nan
 from types import SimpleNamespace
 
-import click
 import numpy as np
 import pytest
+import typer
 from test_multi_map import _grid
 from typer.testing import CliRunner
 
@@ -84,7 +84,7 @@ def test_empty_rotation_set_is_refused(inputs):
 
 
 def _message(text):
-    return pytest.raises(click.UsageError, match=f"^{re.escape(text)}$")
+    return pytest.raises(typer.BadParameter, match=f"^{re.escape(text)}$")
 
 
 def _check(**changes):
