@@ -18,6 +18,15 @@ def has_spread(score_ave, score_std):
     return bool(np.isfinite(score_std) and score_std > 1e-6 * max(1.0, abs(score_ave)))
 
 
+def per_voxel(score, ref_map):
+    """A search score per reference voxel, in float32 under numpy 1 and 2 alike
+
+    numpy 2 divides a float32 score by the voxel count in float32; numpy 1 would promote it
+    to float64 and change the scores' last digits, their statistics and near-tie ranks.
+    """
+    return np.float32(score) / np.float32(ref_map.new_data.size)
+
+
 def dm_fit_scores(top_items, score_ave, score_std):
     """DiffModeler's fit score of each top pose, as its read_score() takes it from the printout.
 
@@ -787,7 +796,7 @@ class MapFitter:
             result_list.append(
                 {
                     "angle": rot_ang,
-                    "score": score / ref_map.new_data.size,
+                    "score": per_voxel(score, ref_map),
                     "vox_trans": vox_trans,
                 }
             )
@@ -939,7 +948,7 @@ class MapFitter:
                                     curr_result_list.append(
                                         {
                                             "angle": rot_ang,
-                                            "score": score / self.ref_map.new_data.size,
+                                            "score": per_voxel(score, self.ref_map),
                                             "vox_trans": vox_trans,
                                         }
                                     )
@@ -979,7 +988,7 @@ class MapFitter:
                         curr_result_list.append(
                             {
                                 "angle": rot_ang,
-                                "score": result[0] / self.ref_map.new_data.size,
+                                "score": per_voxel(result[0], self.ref_map),
                                 "vox_trans": result[1],
                             }
                         )
