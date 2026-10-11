@@ -265,6 +265,15 @@ class EMmap:
         self.std = std
         self.std_norm_ave = std_norm_ave
 
+    def save_vectors(self, save_path):
+        """Save the nonzero voxels' real-space coordinates and vectors as
+        <save_path>_coords.npy and <save_path>_vecs.npy, both (N, 3)"""
+        print("Saving vectors to: " + save_path)
+        index = np.nonzero(self.new_data)
+        coords = self.new_orig + np.array(index).T * self.new_width
+        np.save(save_path + "_coords.npy", coords)
+        np.save(save_path + "_vecs.npy", self.vec[index])
+
 
 def unify_dims(map_list, voxel_size):
     """

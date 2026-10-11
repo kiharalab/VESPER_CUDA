@@ -69,11 +69,7 @@ def _write_model(path):
 
 
 def _atom_fields(path):
-    """Fields of each atom line; occupancy is the third from the end.
-
-    (Fields, not columns: upstream's writer for cif input puts every field from the residue
-    name on one column left of the PDB format.)
-    """
+    """Fields of each atom line; occupancy is the third from the end."""
     with open(path) as f:
         return [line.split() for line in f if line.startswith(("ATOM", "HETATM"))]
 

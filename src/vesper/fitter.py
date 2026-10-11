@@ -13,6 +13,11 @@ from .data.io import save_rotated_pdb, save_score_pkl, save_vec_as_pdb
 from .utils.utils import get_score
 
 
+def has_spread(score_ave, score_std):
+    """False when the score std is not finite or only float rounding of identical scores"""
+    return bool(np.isfinite(score_std) and score_std > 1e-6 * max(1.0, abs(score_ave)))
+
+
 def dm_fit_scores(top_items, score_ave, score_std):
     """DiffModeler's fit score of each top pose, as its read_score() takes it from the printout.
 
@@ -24,10 +29,39 @@ def dm_fit_scores(top_items, score_ave, score_std):
         values = [item["ldp_recall"] for item in top_items]
     else:
         values = [
-            (item["score"] - score_ave) / score_std if score_std > 0 else 0.0
+            (item["score"] - score_ave) / score_std
+            if has_spread(score_ave, score_std)
+            else 0.0
             for item in top_items
         ]
     return [float(f"{v:.6f}") * 100 for v in values]
+
+
+def is_cuda_oom(error):
+    """True for a CUDA out-of-memory error, also as cuFFT reports it (a plain RuntimeError)"""
+    if isinstance(error, torch.cuda.OutOfMemoryError):
+        return True
+    text = str(error)
+    return "out of memory" in text or "CUFFT_ALLOC_FAILED" in text
+
+
+def auto_batch_size(free_bytes, per_rotation, fixed, streams):
+    """Rotations per batch: 70% of the free memory, shared by the streams, capped at 256"""
+    budget = 0.7 * free_bytes / streams - fixed
+    return max(1, min(int(budget // per_rotation), 256))
+
+
+def fit_batch_size(batch_size, try_batch):
+    """Halve batch_size down to 1 until try_batch(batch_size) allocates without running out"""
+    while True:
+        try:
+            try_batch(batch_size)
+            return batch_size
+        except (torch.cuda.OutOfMemoryError, RuntimeError) as error:
+            if not is_cuda_oom(error) or batch_size == 1:
+                raise
+        failed, batch_size = batch_size, batch_size // 2
+        print(f"GPU out of memory at batch {failed}: retrying with {batch_size}")
 
 
 class MapFitter:
@@ -61,6 +95,7 @@ class MapFitter:
         score=None,
         batch_size=None,
         ref_labels=None,
+        refine_step=2,
     ):
         print("###Initializing fitter###")
 
@@ -86,6 +121,9 @@ class MapFitter:
         self.save_mrc = save_mrc
         self.save_vec = save_vec
         self.batch_size = batch_size
+        if not (isinstance(refine_step, (int, np.integer)) and refine_step in (1, 2)):
+            raise ValueError(f"refine_step must be 1 or 2, not {refine_step}")
+        self.refine_step = refine_step
         self.angle_comb = []
 
         self.result_list = None
@@ -127,6 +165,10 @@ class MapFitter:
 
         # calculate combination of rotation angles
         self._calc_angle_comb()
+        if len(self.angle_comb) == 0:
+            raise ValueError(
+                "No rotations to search: check -A (angle spacing) and -al (angle limit)"
+            )
         # self._calc_angle_comb_quat()
         self.total_rotations = len(self.angle_comb)
 
@@ -245,10 +287,10 @@ class MapFitter:
         else:
             import pyfftw.config
 
-            pyfftw.config.PLANNER_EFFORT = "FFTW_MEASURE"
-            pyfftw.config.NUM_THREADS = max(
-                os.cpu_count() - 2, 2
-            )  # Maybe the CPU is sweating too much?
+            # FFTW_MEASURE picks algorithms by timing them, so scores change run to run
+            pyfftw.config.PLANNER_EFFORT = "FFTW_ESTIMATE"
+            # -c threads already run rotations; FFTW threads on top oversubscribe the CPUs
+            pyfftw.config.NUM_THREADS = 1
 
     @property
     def ref_map(self):
@@ -269,7 +311,7 @@ class MapFitter:
 
         # Postprocessing for other modes
         if self.mode == "O":
-            ref_x_real = np.where(ref_map.new_data > 0, 1.0, 0.0)
+            ref_x_real = np.where(ref_map.new_data > 0, 1.0, 0.0).astype(np.float32)
         elif self.mode == "C":
             ref_x_real = np.where(ref_map.new_data > 0, ref_map.new_data, 0.0)
         elif self.mode == "P":
@@ -316,7 +358,8 @@ class MapFitter:
                     ]
                 )
 
-        return fft_list
+        # complex64 whatever the numpy version, so both paths agree
+        return [fft_arr.astype(np.complex64) for fft_arr in fft_list]
 
     def _get_rotation_matrix(self, rot_ang):
         """Get cached rotation matrix or compute and cache if not found"""
@@ -330,33 +373,54 @@ class MapFitter:
         return self.rotation_matrices[ang_key]
 
     def _get_optimal_batch_size(self):
-        """Determine optimal batch size based on GPU memory"""
+        """Batch size from the GPU memory free now, i.e. after every map's FFTs are resident"""
         if not self.gpu:
             return 1
 
         import torch
 
-        # Get GPU memory in GB
-        total_memory = torch.cuda.get_device_properties(self.device).total_memory / (
-            1024**3
+        free_bytes, total_bytes = torch.cuda.mem_get_info(self.device)
+        voxels = self.tgt_map.new_data.shape[0] ** 3
+        n_channels = len(self.ref_map_fft_lists_gpu[0])
+        batch = auto_batch_size(
+            free_bytes,
+            per_rotation=voxels * 4 * 5,  # data, vec, old_pos, new_data, temp
+            # complex64 half spectra of the target's channels (4 B a voxel each), and the
+            # summed product, its inverse and the score array (16 B a voxel)
+            fixed=voxels * (4 * n_channels + 16),
+            streams=self.num_streams,
         )
+        print(
+            f"GPU Memory: {free_bytes / 1024**3:.1f}GB free of "
+            f"{total_bytes / 1024**3:.1f}GB, Optimal batch size: {batch}"
+        )
+        return batch
 
-        # Estimate memory per rotation (data + vec + intermediate buffers)
-        # Assuming ~100MB per rotation for typical map sizes
-        dim = self.tgt_map.new_data.shape[0]
-        memory_per_rotation_gb = (dim**3 * 4 * 5) / (
-            1024**3
-        )  # 5 arrays: data, vec, old_pos, new_data, temp
+    def _fit_batch_size(self, batch_size, ref_ids, angles):
+        """Halve batch_size until one round over angles (a batch per stream) fits"""
+        import gc
 
-        # Use 70% of GPU memory for batching, rest for FFT operations
-        available_memory = total_memory * 0.7
-        optimal_batch = int(available_memory / memory_per_rotation_gb)
+        import torch
 
-        # Clamp between reasonable bounds
-        optimal_batch = max(8, min(optimal_batch, 256))
+        def try_batch(n):
+            try:
+                # the first round: batches of n over the angles, the last the remainder
+                batches = [angles[i : i + n] for i in range(0, len(angles), n)][
+                    : len(self.cuda_streams)
+                ]
+                streams = self.cuda_streams[: len(batches)]
+                for stream, batch in zip(streams, batches):
+                    with torch.cuda.stream(stream):
+                        self._rot_and_search_fft_batch(
+                            batch, stream=stream, ref_ids=ref_ids
+                        )
+                for stream in streams:
+                    stream.synchronize()
+            finally:
+                gc.collect()
+                torch.cuda.empty_cache()
 
-        print(f"GPU Memory: {total_memory:.1f}GB, Optimal batch size: {optimal_batch}")
-        return optimal_batch
+        return fit_batch_size(batch_size, try_batch)
 
     def _init_gpu_buffers(self):
         """Pre-allocate GPU buffers for memory reuse during rotation"""
@@ -467,6 +531,9 @@ class MapFitter:
                     x2 = torch.where(
                         x2 > zero_tensor, x2 - self.tgt_map.ave, zero_tensor
                     )  # ty:ignore[no-matching-overload]
+                elif self.mode == "L":
+                    x2 = laplace(x2.cpu().numpy(), mode="constant", cval=0.0)
+                    x2 = torch.from_numpy(x2).to(self.device)
                 tgt_map_pre_fft_list = [x2]
 
             # Find best translation in each map
@@ -583,6 +650,7 @@ class MapFitter:
         # refine
 
         if self.ang_interval >= 5 and self.refine:
+            # fixed at 2 degrees: ss has no -R and is to be removed, so refine_step does not reach it
             self.refine_ss(2)
 
         if self.refined_list:
@@ -629,6 +697,9 @@ class MapFitter:
                 print(f"Using override batch size: {batch_size}")
             else:
                 batch_size = self._get_optimal_batch_size()
+            self.batch_size = batch_size = self._fit_batch_size(
+                batch_size, ref_ids, self.angle_comb
+            )
 
             # Single-threaded batch processing with CUDA streams for overlap
             import torch
@@ -678,17 +749,20 @@ class MapFitter:
                 with concurrent.futures.ThreadPoolExecutor(
                     max_workers=self.threads
                 ) as executor:
-                    futures = {
-                        executor.submit(
-                            self._rot_and_search_fft,
+                    futures = [
+                        (
                             rot_ang,
-                            False,
-                            ref_ids,
-                        ): rot_ang
+                            executor.submit(
+                                self._rot_and_search_fft,
+                                rot_ang,
+                                False,
+                                ref_ids,
+                            ),
+                        )
                         for rot_ang in self.angle_comb
-                    }
-                    for future in concurrent.futures.as_completed(futures):
-                        rot_ang = futures[future]
+                    ]
+                    # in angle order, so that tied scores do not depend on timing
+                    for rot_ang, future in futures:
                         map_results = future.result()
                         pbar.update(1)
                         self._add_search_results(search_lists, rot_ang, map_results)
@@ -750,7 +824,9 @@ class MapFitter:
             print()
 
         if self.ang_interval >= 5:
-            self.refine(2, self.topn, sort_by_ldp_recall=self.ldp_recall_mode)
+            self.refine(
+                self.refine_step, self.topn, sort_by_ldp_recall=self.ldp_recall_mode
+            )
 
         if self.refined_list:
             self.final_list = self.refined_list[: self.topn]
@@ -778,33 +854,34 @@ class MapFitter:
         if self.save_mrc:
             self._save_topn_mrc()
 
+    @staticmethod
+    def _refine_angles(angle, step):
+        """Angles within +-5 degrees of a coarse pose, in steps of `step`, without the pose itself
+
+        At step 2 the offsets are odd (-5, -3, ..., 5); at step 1 the grid holds offset 0, which is
+        the coarse pose, already in the list being refined.
+        """
+        axes = [range(int(a) - 5, int(a) + 6, step) for a in angle]
+        coarse = tuple(float(a) for a in angle)
+        angles = np.array(
+            [p for p in product(*axes) if p != coarse], dtype=np.float32
+        ).reshape(-1, 3)
+        # make sure the angles are in the range of 0-360
+        angles[angles < 0] += 360
+        angles[angles > 360] -= 360
+        return angles
+
     def refine(self, ang_interval, top_n, sort_by_ldp_recall=False):
         print("###Start Refining###")
         self.refined_list = []
         top_n_list = self.result_list[:top_n]
+        # probed apart from the search, whose probe may have run fewer rotations (-al)
+        refine_batch_size = None
 
         for result in tqdm(top_n_list, desc="Refining Top N", position=0):
-            # the coarse pose competes with its neighbours: the offsets below are odd (-5, -3, ..., 5), so
-            # without it a pose that no neighbour beats comes back a few degrees off (first maximum wins ties)
+            # the coarse pose competes with its neighbours (first maximum wins ties)
             curr_result_list = [dict(result)]
-
-            # compose angle list using the interval
-            x_list = range(
-                int(result["angle"][0]) - 5, int(result["angle"][0]) + 6, ang_interval
-            )
-            y_list = range(
-                int(result["angle"][1]) - 5, int(result["angle"][1]) + 6, ang_interval
-            )
-            z_list = range(
-                int(result["angle"][2]) - 5, int(result["angle"][2]) + 6, ang_interval
-            )
-            curr_refine_ang_list = np.array(
-                list(product(x_list, y_list, z_list))
-            ).astype(np.float32)
-
-            # make sure the angles are in the range of 0-360
-            curr_refine_ang_list[curr_refine_ang_list < 0] += 360
-            curr_refine_ang_list[curr_refine_ang_list > 360] -= 360
+            curr_refine_ang_list = self._refine_angles(result["angle"], ang_interval)
 
             # Use batched processing on GPU
             if self.gpu:
@@ -819,6 +896,11 @@ class MapFitter:
                     batch_size = len(
                         curr_refine_ang_list
                     )  # Process all refinement angles in one batch
+                if refine_batch_size is None:
+                    refine_batch_size = self._fit_batch_size(
+                        batch_size, None, curr_refine_ang_list
+                    )
+                batch_size = refine_batch_size
 
                 with tqdm(
                     total=len(curr_refine_ang_list), position=1, leave=False
@@ -874,16 +956,19 @@ class MapFitter:
                 with tqdm(
                     total=len(curr_refine_ang_list), position=1, leave=False
                 ) as pbar:
-                    futures = {
-                        executor.submit(
-                            self._rot_and_search_fft,
+                    futures = [
+                        (
                             rot_ang,
-                            False,
-                        ): rot_ang
+                            executor.submit(
+                                self._rot_and_search_fft,
+                                rot_ang,
+                                False,
+                            ),
+                        )
                         for rot_ang in curr_refine_ang_list
-                    }
-                    for future in concurrent.futures.as_completed(futures):
-                        rot_ang = futures[future]
+                    ]
+                    # in angle order, so that tied scores do not depend on timing
+                    for rot_ang, future in futures:
                         # the selected map's (score, vox_trans)
                         result = future.result()[0]
                         pbar.update(1)
@@ -922,27 +1007,9 @@ class MapFitter:
         self.refined_list = []
         top_n_list = self.result_list[: self.topn]
         for result in tqdm(top_n_list, desc="Refining Top N", position=0):
-            # the coarse pose competes with its neighbours: the offsets below are odd (-5, -3, ..., 5), so
-            # without it a pose that no neighbour beats comes back a few degrees off (first maximum wins ties)
+            # the coarse pose competes with its neighbours (first maximum wins ties)
             curr_result_list = [dict(result)]
-
-            # compose angle list using the interval
-            x_list = range(
-                int(result["angle"][0]) - 5, int(result["angle"][0]) + 6, ang_interval
-            )
-            y_list = range(
-                int(result["angle"][1]) - 5, int(result["angle"][1]) + 6, ang_interval
-            )
-            z_list = range(
-                int(result["angle"][2]) - 5, int(result["angle"][2]) + 6, ang_interval
-            )
-            curr_refine_ang_list = np.array(
-                list(product(x_list, y_list, z_list))
-            ).astype(np.float32)
-
-            # make sure the angles are in the range of 0-360
-            curr_refine_ang_list[curr_refine_ang_list < 0] += 360
-            curr_refine_ang_list[curr_refine_ang_list > 360] -= 360
+            curr_refine_ang_list = self._refine_angles(result["angle"], ang_interval)
             with tqdm(total=len(curr_refine_ang_list), position=1, leave=False) as pbar:
                 for rot_ang in curr_refine_ang_list:
                     result = self._rot_and_search_fft_ss(
@@ -1094,67 +1161,34 @@ class MapFitter:
             results.sort(key=lambda x: x["ldp_recall"], reverse=True)
 
     def _remove_dup_results(self):
-        no_dup_results = []
-
         print("###Start Duplicate Removal###")
 
-        # duplicate removal
-        hash_angs = {}
-
-        # non_dup_count = 0
-
-        # at least 30 degrees apart
-        n_angles_apart = 30 // self.ang_interval  # could be directly specified
-        ang_range = n_angles_apart * int(self.ang_interval)
-        ang_range = int(ang_range)
-
-        for result in tqdm(self.result_list, desc="Removing Duplicates"):
-            # duplicate removal
-            if tuple(result["angle"]) in hash_angs:
-                # print(f"Duplicate: {result_mrc['angle']}")
-                trans = hash_angs[tuple(result["angle"])]
-                # manhattan distance
-                if np.sum(np.abs(trans - result["vox_trans"])) < self.tgt_map.new_dim:
-                    # result_mrc["vec_score"] = 0
-                    continue
-
-            # add to hash
-            hash_angs[tuple(result["angle"])] = np.array(result["vox_trans"])
-
-            ang_x, ang_y, ang_z = (
-                int(result["angle"][0]),
-                int(result["angle"][1]),
-                int(result["angle"][2]),
+        # a pose is a duplicate of a better one at most 30 degrees away in rotation
+        # (the angle between the two rotations) and close in translation
+        if not self.result_list:
+            return
+        quats = R.from_euler(
+            "xyz", [r["angle"] for r in self.result_list], degrees=True
+        ).as_quat()
+        trans = np.array([r["vox_trans"] for r in self.result_list])
+        kept = np.empty(len(quats), dtype=int)
+        kept_quats = np.empty_like(quats)
+        n_kept = 0
+        for i in tqdm(range(len(quats)), desc="Removing Duplicates"):
+            theta = np.degrees(
+                2 * np.arccos(np.clip(np.abs(kept_quats[:n_kept] @ quats[i]), 0, 1))
             )
-
-            # add surrounding angles to hash
-            for xx in range(
-                ang_x - ang_range, ang_x + ang_range + 1, int(self.ang_interval)
+            near = kept[:n_kept][theta <= 30 + 1e-6]
+            # manhattan distance
+            if np.any(
+                np.abs(trans[near] - trans[i]).sum(axis=-1) < self.tgt_map.new_dim
             ):
-                for yy in range(
-                    ang_y - ang_range, ang_y + ang_range + 1, int(self.ang_interval)
-                ):
-                    for zz in range(
-                        ang_z - ang_range, ang_z + ang_range + 1, int(self.ang_interval)
-                    ):
-                        x_positive = xx % 360
-                        y_positive = yy % 360
-                        z_positive = zz % 180
+                continue
+            kept[n_kept] = i
+            kept_quats[n_kept] = quats[i]
+            n_kept += 1
 
-                        x_positive = x_positive + 360 if x_positive < 0 else x_positive
-                        y_positive = y_positive + 360 if y_positive < 0 else y_positive
-                        z_positive = z_positive + 180 if z_positive < 0 else z_positive
-
-                        curr_trans = np.array(
-                            [x_positive, y_positive, z_positive]
-                        ).astype(np.float64)
-                        # insert into hash
-                        hash_angs[tuple(curr_trans)] = np.array(result["vox_trans"])
-
-            # non_dup_count += 1
-            no_dup_results.append(result)
-
-        self.result_list = no_dup_results
+        self.result_list = [self.result_list[i] for i in kept[:n_kept]]
 
     @staticmethod
     def _print_result_stats(results, return_stats=False):
@@ -1179,7 +1213,11 @@ class MapFitter:
         )
 
         print("Score=", "{:.6f}".format(item["score"]))
-        norm_score = (item["score"] - self.score_ave) / self.score_std
+        norm_score = (
+            (item["score"] - self.score_ave) / self.score_std
+            if has_spread(self.score_ave, self.score_std)
+            else 0.0
+        )
         print(f"Voxel Trans= {item['vox_trans']}, Normalized Score= {norm_score:.6f}")
 
         if self.ldp_recall_mode:
@@ -1343,7 +1381,7 @@ class MapFitter:
             if not self.gpu:
                 x2 = new_data
                 if self.mode == "O":
-                    x2 = np.where(x2 > 0, 1.0, 0.0)
+                    x2 = np.where(x2 > 0, 1.0, 0.0).astype(np.float32)
                 elif self.mode == "C":
                     x2 = np.where(x2 > 0, x2, 0.0)
                 elif self.mode == "P":
@@ -1405,7 +1443,7 @@ class MapFitter:
         map_results = []
         for i in ref_ids:
             fft_result_list = self._fft_get_prod_list(
-                ref_map_fft_lists[i], tgt_map_fft_list
+                ref_map_fft_lists[i], tgt_map_fft_list, sum_channels=True
             )
             score, vox_trans = self._find_best_trans_by_fft_list(
                 fft_result_list, gpu=self.gpu
@@ -1720,24 +1758,23 @@ class MapFitter:
 
             return [numpy_fft.rfftn(tgt_real) for tgt_real in tgt_map_pre_fft_list]
 
-    def _fft_get_prod_list(self, ref_map_fft_list, tgt_map_fft_list):
-        dot_product_list = []
+    def _fft_get_prod_list(
+        self, ref_map_fft_list, tgt_map_fft_list, sum_channels=False
+    ):
+        """Inverse transforms of the channels' products, or of their sum (one entry)"""
+        products = (
+            ref_fourier * tgt_fourier
+            for ref_fourier, tgt_fourier in zip(ref_map_fft_list, tgt_map_fft_list)
+        )
+        if sum_channels:
+            products = [sum(products)]
         if self.gpu:
             import torch
 
-            for ref_fourier, tgt_fourier in zip(ref_map_fft_list, tgt_map_fft_list):
-                dot_fourier = ref_fourier * tgt_fourier
-                dot_real = torch.fft.irfftn(dot_fourier, norm="forward")
-                dot_product_list.append(dot_real)
-        else:
-            from pyfftw.interfaces import numpy_fft
+            return [torch.fft.irfftn(dot, norm="forward") for dot in products]
+        from pyfftw.interfaces import numpy_fft
 
-            for ref_fourier, tgt_fourier in zip(ref_map_fft_list, tgt_map_fft_list):
-                dot_fourier = ref_fourier * tgt_fourier
-                dot_real = numpy_fft.irfftn(dot_fourier, norm="forward")
-                dot_product_list.append(dot_real)
-
-        return dot_product_list
+        return [numpy_fft.irfftn(dot, norm="forward") for dot in products]
 
     @staticmethod
     def _find_best_trans_by_fft_list(fft_result_list, gpu=False):
@@ -1803,9 +1840,11 @@ class MapFitter:
         """Calculate the all the possible combination of angles given the interval in degrees"""
 
         if self.confine_angles is not None:
-            x_angle = y_angle = z_angle = np.arange(
+            x_angle = np.arange(
                 -self.confine_angles, self.confine_angles + 1, self.ang_interval
             )
+            y_angle = x_angle.copy()
+            z_angle = x_angle.copy()
         else:
             xy_limit = 360
             z_limit = 180
@@ -1814,10 +1853,10 @@ class MapFitter:
             y_angle = np.arange(0, xy_limit, self.ang_interval)
             z_angle = np.arange(0, z_limit + 1, self.ang_interval)
 
-        # make sure positive angles are in the range of 0-360
-        x_angle[x_angle < 0] += 360
-        y_angle[y_angle < 0] += 360
-        z_angle[z_angle < 0] += 180
+        # make negative angles positive (modulo 360 on each axis)
+        x_angle[x_angle < 0] %= 360
+        y_angle[y_angle < 0] %= 360
+        z_angle[z_angle < 0] %= 360
 
         angle_comb = np.array(np.meshgrid(x_angle, y_angle, z_angle)).T.reshape(-1, 3)
 
