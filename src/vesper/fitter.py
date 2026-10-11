@@ -385,7 +385,9 @@ class MapFitter:
         batch = auto_batch_size(
             free_bytes,
             per_rotation=voxels * 4 * 5,  # data, vec, old_pos, new_data, temp
-            fixed=voxels * 20 * n_channels,  # complex128 products and their inverses
+            # complex64 half spectra of the target's channels (4 B a voxel each), and the
+            # summed product, its inverse and the score array (16 B a voxel)
+            fixed=voxels * (4 * n_channels + 16),
             streams=self.num_streams,
         )
         print(
