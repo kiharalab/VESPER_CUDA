@@ -173,6 +173,65 @@ def check_ref_grids(ref_maps: list[EMmap], voxel_spacing: float) -> None:
             )
 
 
+def prepare_maps(
+    ref_paths: list[str],
+    ref_labels: list[str] | None,
+    tgt_path: str,
+    threshold_map1: float,
+    threshold_map2: float,
+    voxel_spacing: float,
+    gaussian_bandwidth: float,
+    eval_mode: bool = False,
+) -> tuple[list[EMmap], EMmap]:
+    """Read the maps, put them on one search grid and resample them (mean shift with a
+    Gaussian kernel) with their vectors; with eval_mode the target takes the reference grid"""
+    start_time = time.time()
+
+    # construct mrc objects
+    ref_maps = [EMmap(path) for path in ref_paths]
+    tgt_map = EMmap(tgt_path)
+
+    # set voxel size
+    for ref_map in ref_maps:
+        ref_map.set_vox_size(thr=threshold_map1, voxel_size=voxel_spacing)
+    tgt_map.set_vox_size(thr=threshold_map2, voxel_size=voxel_spacing)
+
+    # unify dimensions: all maps and the target share one search grid
+    unify_dims([*ref_maps, tgt_map], voxel_size=voxel_spacing)
+    if len(ref_maps) > 1:
+        check_ref_grids(ref_maps, voxel_spacing)
+    if eval_mode:
+        # -E scores the target where it sits: resample it on the reference grid
+        tgt_map.new_cent, tgt_map.new_orig = ref_maps[0].new_cent, ref_maps[0].new_orig
+
+    # resample the maps using mean-shift with Gaussian kernel and calculate the vector representation
+    for i, ref_map in enumerate(ref_maps):
+        name = f" ({ref_labels[i]})" if len(ref_maps) > 1 else ""
+        print(f"\n###Processing Reference Map Resampling{name}###")
+        ref_map.resample_and_vec(dreso=gaussian_bandwidth)
+    print("\n###Processing Target Map Resampling###")
+    tgt_map.resample_and_vec(dreso=gaussian_bandwidth)
+    print()
+
+    end_resample = time.time()
+    print(f"Resample time: {end_resample - start_time:.2f} s")
+    return ref_maps, tgt_map
+
+
+def simulate_target(structure: str, resolution: float, backbone_only: bool) -> str:
+    """A map simulated from the structure at the resolution, in the temporary folder"""
+    import random
+    import string
+
+    rand_str = "".join(random.choices(string.ascii_letters + string.digits, k=8))
+    sim_map_path = os.path.join(tempfile.gettempdir(), f"simu_map_{rand_str}.mrc")
+    pdb2vol(structure, resolution, sim_map_path, backbone_only=backbone_only)
+    assert os.path.exists(sim_map_path), (
+        "Failed to create simulated map from structure."
+    )
+    return sim_map_path
+
+
 def evaluate_current_position(
     ref_maps: list[EMmap],
     ref_labels: list[str] | None,
@@ -351,9 +410,6 @@ def orig_command(
     ),
 ) -> None:
     """Original VESPER command"""
-    import random
-    import string
-
     remove_old_score_pkl(output_dir, pdbin, map1, labels)
     ref_paths, ref_labels, ldp_paths = validate_ref_args(
         map1, labels, ldp_file, ca_file, direct_fit
@@ -370,20 +426,12 @@ def orig_command(
         )
         save_models = False
 
-    # generate random string for temp folder
-    rand_str = "".join(random.choices(string.ascii_letters + string.digits, k=8))
-
     # check if the second input is a structure file
     target_arg = map2
     ext, _ = get_file_extension(map2)
     if ext in ["pdb", "cif"]:
         # simulate the map at target resolution
-        sim_map_path = os.path.join(tempfile.gettempdir(), f"simu_map_{rand_str}.mrc")
-        pdb2vol(map2, resolution, sim_map_path, backbone_only=backbone_only)
-        assert os.path.exists(sim_map_path), (
-            "Failed to create simulated map from structure."
-        )
-        map2 = sim_map_path
+        map2 = simulate_target(map2, resolution, backbone_only)
 
     # Setup GPU
     use_gpu, device = setup_gpu(gpu_id)
@@ -439,36 +487,16 @@ def orig_command(
     else:
         print("LDP Recall Reranking Disabled")
 
-    start_time = time.time()
-
-    # construct mrc objects
-    ref_maps = [EMmap(path) for path in ref_paths]
-    tgt_map = EMmap(map2)
-
-    # set voxel size
-    for ref_map in ref_maps:
-        ref_map.set_vox_size(thr=threshold_map1, voxel_size=voxel_spacing)
-    tgt_map.set_vox_size(thr=threshold_map2, voxel_size=voxel_spacing)
-
-    # unify dimensions: all maps and the target share one search grid
-    unify_dims([*ref_maps, tgt_map], voxel_size=voxel_spacing)
-    if len(ref_maps) > 1:
-        check_ref_grids(ref_maps, voxel_spacing)
-    if eval_mode:
-        # -E scores the target where it sits: resample it on the reference grid
-        tgt_map.new_cent, tgt_map.new_orig = ref_maps[0].new_cent, ref_maps[0].new_orig
-
-    # resample the maps using mean-shift with Gaussian kernel and calculate the vector representation
-    for i, ref_map in enumerate(ref_maps):
-        name = f" ({ref_labels[i]})" if len(ref_maps) > 1 else ""
-        print(f"\n###Processing Reference Map Resampling{name}###")
-        ref_map.resample_and_vec(dreso=gaussian_bandwidth)
-    print("\n###Processing Target Map Resampling###")
-    tgt_map.resample_and_vec(dreso=gaussian_bandwidth)
-    print()
-
-    end_resample = time.time()
-    print(f"Resample time: {end_resample - start_time:.2f} s")
+    ref_maps, tgt_map = prepare_maps(
+        ref_paths,
+        ref_labels,
+        map2,
+        threshold_map1,
+        threshold_map2,
+        voxel_spacing,
+        gaussian_bandwidth,
+        eval_mode,
+    )
 
     if vector_dir:
         os.makedirs(vector_dir, exist_ok=True)

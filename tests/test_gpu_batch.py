@@ -210,6 +210,7 @@ def test_refinement_batches_are_capped_by_the_fitted_size(monkeypatch):
         ]
         fitter_module.MapFitter.refine(stub, 2, 1)
         stub.final_list = []
+        stub.fit_scores = []
 
     stub._finish_selected_map = finish
     fitter_module.MapFitter.fit(stub)
@@ -269,6 +270,7 @@ def test_refinement_probes_its_own_batch_size(monkeypatch, capsys):
         ]
         fitter_module.MapFitter.refine(stub, 2, 1)
         stub.final_list = []
+        stub.fit_scores = []
 
     stub._finish_selected_map = finish
     fitter_module.MapFitter.fit(stub)
