@@ -22,6 +22,13 @@ The table lists, per example, the pose files in rank order (their names carry th
 the translation), each pose's occupancy, `score.pkl`, `eval.json` and every `.npy` file's shape and
 sum, with scores rounded to 4 decimals.
 
+The table does not compare the pose files' layout, and another engine's files need not be
+byte-identical to these. FlashVESPER copies the input `.pdb` and rewrites only coordinates and
+occupancies (REMARK and other records stay, no TER is added); VESPER rewrites the structure
+through Biopython. So `model.pdb`'s identity "Rotation matrix" REMARK reappears unchanged in
+FlashVESPER's poses. Code that takes the transforms from the API and writes the poses itself
+(DiffModeler, with `vesper.data.io.save_rotated_pdb`) gets the same files from either engine.
+
 ## Examples
 
 Unless a row says otherwise, each example searches the structure, simulated at 5 A (`-res 5`), in
