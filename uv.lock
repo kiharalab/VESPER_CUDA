@@ -1168,7 +1168,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "biopython", specifier = ">=1.84" },
+    { name = "biopython", specifier = ">=1.88" },
     { name = "gemmi", specifier = ">=0.5.6" },
     { name = "mrcfile", specifier = ">=1.5" },
     { name = "numba", specifier = ">=0.60" },
