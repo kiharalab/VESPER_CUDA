@@ -2,6 +2,7 @@ import gzip
 import os
 import pickle
 import tempfile
+import warnings
 
 import numpy as np
 from Bio.PDB import PDBParser
@@ -18,14 +19,55 @@ def _atom_name_field(name, element):
     return f"{name[:4]:<4s}"
 
 
+def _cif_value(value):
+    """One mmCIF value: ? where there is none, quoted where it has blanks or quotes."""
+    if value in ("", "?", "."):
+        return "?"
+    bare = not any(c.isspace() or c in "'\"" for c in value)
+    reserved = value.lower().startswith(("data_", "save_", "loop_", "global_", "stop_"))
+    if bare and value[0] not in "_#$;[]" and not reserved:
+        return value
+    if "'" not in value:
+        return f"'{value}'"
+    if '"' not in value:
+        return f'"{value}"'
+    return f";{value}\n;"
+
+
+def _mmcif_pose(mmcif_dict, coords, occupancy):
+    """The model's _atom_site loop with the moved coordinates and the occupancy."""
+    tags = [k for k in mmcif_dict if k.startswith("_atom_site.")]
+    held = "_atom_site.occupancy" in mmcif_dict
+    xyz = {f"_atom_site.Cartn_{a}": i for i, a in enumerate("xyz")}
+    lines = ["data_vesper\n", "#\n", "loop_\n"] + [tag + "\n" for tag in tags]
+    if not held:
+        lines.append("_atom_site.occupancy\n")
+    for i in range(len(coords)):
+        row = []
+        for tag in tags:
+            if tag in xyz:
+                row.append(f"{coords[i, xyz[tag]]:.3f}")
+            elif tag == "_atom_site.occupancy":
+                row.append(f"{occupancy:.2f}")
+            else:
+                row.append(_cif_value(mmcif_dict[tag][i]))
+        if not held:
+            row.append(f"{occupancy:.2f}")
+        lines.append(" ".join(row) + "\n")
+    lines.append("#\n")
+    return lines
+
+
 def save_rotated_pdb(
     input_pdb, rot_mtx, real_trans, save_path, model_num, occupancy=None
 ):
     """
-    Save a rotated and translated PDB file.
+    Save a rotated and translated PDB file; returns the path written.
 
     Handles .gz compressed files and CIF files without B-factors. occupancy, if given,
-    replaces every atom's occupancy.
+    replaces every atom's occupancy. A CIF model too wide for PDB's columns (a chain id of
+    more than one character, for one) is written as mmCIF instead (save_path + ".cif": its
+    _atom_site loop, moved, with the occupancy), with a warning that says so.
     """
     input_format, is_compressed = get_file_extension(input_pdb)
 
@@ -53,6 +95,7 @@ def save_rotated_pdb(
                     atom.set_occupancy(occupancy)
             io.set_structure(structure)
             io.save(save_path + ".pdb")
+            return save_path + ".pdb"
         elif input_format == "cif":
             # For CIF files without B-factors, directly write transformed PDB
             from Bio.PDB.MMCIF2Dict import MMCIF2Dict
@@ -101,7 +144,7 @@ def save_rotated_pdb(
                 "_atom_site.pdbx_PDB_ins_code", ["?"] * len(x_list)
             )
 
-            # Build every line first: a field that does not fit writes nothing
+            # Build every line first: a field that does not fit switches to mmCIF
             lines = [
                 "REMARK   VESPER transformed structure\n",
                 "REMARK   Rotation matrix:\n",
@@ -114,9 +157,10 @@ def save_rotated_pdb(
                 f"REMARK   Translation: [{real_trans[0]:10.4f}, {real_trans[1]:10.4f}, {real_trans[2]:10.4f}]\n"
             )
 
+            limit = None
             if n_atoms > 99999:
-                raise ValueError("Atom serial number exceeds PDB format limit")
-            for i in range(n_atoms):
+                limit = "Atom serial number exceeds PDB format limit"
+            for i in range(n_atoms if limit is None else 0):
                 x, y, z = transformed[i]
                 atom_name = label_atom_id[i] if i < len(label_atom_id) else "CA"
                 res_name = label_comp_id[i] if i < len(label_comp_id) else "ALA"
@@ -134,7 +178,10 @@ def save_rotated_pdb(
                     ("Insertion code", icode, 1),
                 ]:
                     if len(value) > width:
-                        raise ValueError(f"{what} {value!r} exceeds PDB format limit")
+                        limit = f"{what} {value!r} exceeds PDB format limit"
+                        break
+                if limit is not None:
+                    break
 
                 # Format PDB ATOM record (PDB columns, as Biopython's PDBIO)
                 lines.append(
@@ -144,8 +191,14 @@ def save_rotated_pdb(
                     f"          {type_symbol_list[i]:>2s}\n"
                 )
             lines.append("END\n")
-            with open(save_path + ".pdb", "w") as f:
+            path = save_path + ".pdb"
+            if limit is not None:
+                warnings.warn(f"{limit}; the poses are written as mmCIF (.cif)")
+                lines = _mmcif_pose(mmcif_dict, transformed, occupancy)
+                path = save_path + ".cif"
+            with open(path, "w") as f:
                 f.writelines(lines)
+            return path
         else:
             raise Exception("Input file format not supported. Use .pdb or .cif")
     finally:

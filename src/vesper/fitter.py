@@ -1065,7 +1065,7 @@ class MapFitter:
             trans_str = f"tx{item['real_trans'][0]:.3f}_ty{item['real_trans'][1]:.3f}_tz{item['real_trans'][2]:.3f}"
             filename = f"#{i}_{angle_str}_{trans_str}"
             save_path = os.path.join(self.ref_outdir, "PDB", filename)
-            save_rotated_pdb(
+            path = save_rotated_pdb(
                 self.input_pdb,
                 rot_mtx,
                 item["real_trans"],
@@ -1074,8 +1074,7 @@ class MapFitter:
                 occupancy=None if fit_scores is None else fit_scores[i] / 100,
             )
             if fit_scores is not None:
-                # save_rotated_pdb adds the extension
-                pose_scores[os.path.abspath(save_path + ".pdb")] = fit_scores[i]
+                pose_scores[os.path.abspath(path)] = fit_scores[i]
         if fit_scores is not None:
             save_score_pkl(pose_scores, os.path.join(self.ref_outdir, "score.pkl"))
 
