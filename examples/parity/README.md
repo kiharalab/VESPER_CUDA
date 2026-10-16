@@ -11,8 +11,10 @@ python examples/parity/summarize.py OUT_DIR > OUT_DIR.tsv
 
 `run_all.sh` writes the inputs into `OUT_DIR/inputs/` (see `make_inputs.py`), then runs each example
 into `OUT_DIR/<example>/`: the `-o` folder, `stdout.txt` and `status.txt` (exit status, seconds).
-Set `VESPER` to the command that runs another engine's CLI, e.g.
-`VESPER="python -m flashvesper.cli" bash run_all.sh OTHER_DIR`, and compare the two tables:
+Set `VESPER` to the command that runs another engine's CLI with `vesper orig`'s options, e.g.
+`VESPER=examples/parity/flashvesper.sh bash examples/parity/run_all.sh OTHER_DIR` (FlashVESPER
+has no `orig`, and its defaults are 3 A voxels and duplicate removal: the script passes `-s 7 -dup`
+first), and compare the two tables:
 
 ```bash
 diff <(python summarize.py OUT_DIR) <(python summarize.py OTHER_DIR)
@@ -21,6 +23,13 @@ diff <(python summarize.py OUT_DIR) <(python summarize.py OTHER_DIR)
 The table lists, per example, the pose files in rank order (their names carry the Euler angles and
 the translation), each pose's occupancy, `score.pkl`, `eval.json` and every `.npy` file's shape and
 sum, with scores rounded to 4 decimals.
+
+The table does not compare the pose files' layout, and another engine's files need not be
+byte-identical to these. FlashVESPER copies the input `.pdb` and rewrites only coordinates and
+occupancies (REMARK and other records stay, no TER is added); VESPER rewrites the structure
+through Biopython. So `model.pdb`'s identity "Rotation matrix" REMARK reappears unchanged in
+FlashVESPER's poses. Code that takes the transforms from the API and writes the poses itself
+(DiffModeler, with `vesper.data.io.save_rotated_pdb`) gets the same files from either engine.
 
 ## Examples
 
@@ -53,7 +62,9 @@ the map: `-a map.mrc -t 0.0289 -b model.pdb -T 0.01 -res 5 -s 2 -g 2 -A 30 -N 5 
 through `vesper.api.fit` and writes each pose from the returned transform as `vesper orig` would,
 into `OUT_DIR/api_<example>/`. What must hold: `api_<example>` has the same rows as `<example>` in
 the summary table (on the reference run the pose files are also byte-identical). Another engine's
-API is checked by swapping the `fit` import.
+API is checked by setting `api_examples.fit` to a function with `vesper.api.fit`'s signature and
+defaults that calls it (FlashVESPER's `fit_maps` names the options differently, has defaults of
+its own and returns `Fit` objects).
 
 ## Inputs
 
@@ -72,6 +83,9 @@ API is checked by swapping the `fit` import.
 `reference_summary.tsv` is `summarize.py` on a run on an RTX A6000 (torch 2.10, CUDA 13.0) of the
 CLI examples at 8e464fa and the API examples at the commit that added `vesper.api.fit`. Every
 example exits 0, every row of "What must hold" holds, and every `api_<example>` equals `<example>`.
+FlashVESPER 0.14.1 (`5fff0dc`, same GPU) through `flashvesper.sh`, and its `fit_maps` through such a
+function, gives the same table but for the scores: within 2e-6 of these (relative) on the GPU and
+1e-3 in `cpu`.
 Seconds per example:
 
 | search_V | search_C | search_P | search_O | search_L | refine_R1 | nodup | pdbin_cif | batch_3 | multi_map |
