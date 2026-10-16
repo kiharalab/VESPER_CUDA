@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 import synthetic
 from Bio.PDB import PDBParser
+from Bio.PDB.MMCIF2Dict import MMCIF2Dict
 from scipy.spatial.transform import Rotation as R
 
 from vesper.data.io import save_rotated_pdb
@@ -74,19 +75,24 @@ def test_cif_pose_lines_are_pdb_columns(tmp_path):
     assert {a.get_occupancy() for a in atoms} == {0.5}
 
 
-def _cif_pose(tmp_path, atom_row):
-    """Write a one-atom cif from atom_row (a dict over the columns) and pose it."""
+def _write_cif(path, atom_row):
+    """A one-atom cif from atom_row (a dict over the columns)."""
     cols = dict(
         group_PDB="ATOM", id="1", type_symbol="C", label_atom_id="CA",
         label_comp_id="ALA", label_asym_id="A", label_seq_id="1", Cartn_x="1.0",
         Cartn_y="2.0", Cartn_z="3.0", auth_seq_id="1", auth_asym_id="A",
     )  # fmt: skip
     cols.update(atom_row)
-    model = tmp_path / "m.cif"
-    with open(model, "w") as f:
+    with open(path, "w") as f:
         f.write("data_m\nloop_\n")
         f.writelines(f"_atom_site.{k}\n" for k in cols)
         f.write(" ".join(cols.values()) + "\n")
+
+
+def _cif_pose(tmp_path, atom_row):
+    """Write a one-atom cif from atom_row and pose it; the pose's atom line."""
+    model = tmp_path / "m.cif"
+    _write_cif(model, atom_row)
     save_rotated_pdb(str(model), np.eye(3), np.zeros(3), str(tmp_path / "p"), 0)
     with open(tmp_path / "p.pdb") as f:
         return next(line for line in f if line.startswith(("ATOM", "HETATM")))
@@ -112,22 +118,48 @@ def test_cif_hetatm_record_kept(tmp_path):
     assert line[17:20] == "HOH"
 
 
-@pytest.mark.parametrize(
-    "bad",
-    [
-        dict(auth_asym_id="AA"),
-        dict(auth_seq_id="10000"),
-        dict(label_comp_id="ALAX"),
-        dict(label_atom_id="CAXXX"),
-    ],
-)
-def test_cif_pose_refuses_fields_that_do_not_fit(tmp_path, bad):
-    with pytest.raises(ValueError, match="exceeds PDB format limit"):
-        _cif_pose(tmp_path, bad)
+WIDE = [
+    (dict(auth_asym_id="AA"), "Chain id 'AA'"),
+    (dict(auth_seq_id="10000"), "Residue number '10000'"),
+    (dict(label_comp_id="ALAX"), "Residue name 'ALAX'"),
+    (dict(label_atom_id="CAXXX"), "Atom name 'CAXXX'"),
+]
+
+
+@pytest.mark.parametrize("wide, what", WIDE)
+def test_cif_too_wide_for_pdb_is_written_as_mmcif(tmp_path, wide, what):
+    model = tmp_path / "m.cif"
+    _write_cif(model, wide)
+    m = R.from_euler("xyz", [0.0, 0.0, 90.0], degrees=True)
+    t = np.array([10.0, 20.0, 30.0])
+    with pytest.warns(UserWarning, match=f"{what} exceeds PDB format limit; the poses are written as mmCIF"):
+        path = save_rotated_pdb(str(model), m.inv().as_matrix(), t, str(tmp_path / "p"), 0, occupancy=0.855)
+
+    assert path == str(tmp_path / "p.cif")
     assert not (tmp_path / "p.pdb").exists()
+    pose, source = MMCIF2Dict(path), MMCIF2Dict(str(model))
+    for tag in source:
+        if tag.startswith("_atom_site.") and not tag.startswith("_atom_site.Cartn_"):
+            assert pose[tag] == source[tag], tag
+    xyz = [float(pose[f"_atom_site.Cartn_{a}"][0]) for a in "xyz"]
+    np.testing.assert_allclose(xyz, m.apply([1.0, 2.0, 3.0]) + t, atol=1e-3)
+    assert pose["_atom_site.occupancy"] == ["0.85"]
 
 
-def test_cif_pose_writes_nothing_when_a_later_atom_does_not_fit(tmp_path):
+def test_mmcif_pose_replaces_the_occupancy_and_quotes_values(tmp_path):
+    path = tmp_path / "m.cif"
+    _write_cif(path, dict(auth_asym_id="A0", occupancy="1.00", label_atom_id='"O5\'"', label_alt_id="."))
+    with pytest.warns(UserWarning, match="Chain id 'A0'"):
+        out = save_rotated_pdb(str(path), np.eye(3), np.zeros(3), str(tmp_path / "p"), 0)
+
+    with open(out) as f:
+        lines = f.read().splitlines()
+    assert lines[:3] == ["data_vesper", "#", "loop_"]
+    assert lines[-2:] == ['ATOM 1 C "O5\'" ALA A 1 1.000 2.000 3.000 1 A0 1.00 ?', "#"]
+    assert MMCIF2Dict(out)["_atom_site.label_atom_id"] == ["O5'"]
+
+
+def test_cif_a_later_atom_too_wide_writes_every_atom_as_mmcif(tmp_path):
     model = tmp_path / "m.cif"
     model.write_text(
         "data_m\nloop_\n"
@@ -139,9 +171,10 @@ def test_cif_pose_writes_nothing_when_a_later_atom_does_not_fit(tmp_path):
         + "ATOM 1 C CA ALA A 1 1.0 2.0 3.0 1 A\n"
         + "ATOM 2 C CA ALA A 2 1.0 2.0 3.0 10000 A\n"
     )
-    with pytest.raises(ValueError, match="exceeds PDB format limit"):
-        save_rotated_pdb(str(model), np.eye(3), np.zeros(3), str(tmp_path / "p"), 0)
+    with pytest.warns(UserWarning, match="Residue number '10000' exceeds"):
+        path = save_rotated_pdb(str(model), np.eye(3), np.zeros(3), str(tmp_path / "p"), 0)
     assert not (tmp_path / "p.pdb").exists()
+    assert MMCIF2Dict(path)["_atom_site.auth_seq_id"] == ["1", "10000"]
 
 
 def test_cif_resseq_9999_accepted(tmp_path):
@@ -169,9 +202,10 @@ def test_cif_serial_limit(tmp_path):
 
     pose(99999)
     (tmp_path / "p.pdb").unlink()
-    with pytest.raises(ValueError, match="serial number exceeds"):
+    with pytest.warns(UserWarning, match="serial number exceeds"):
         pose(100000)
     assert not (tmp_path / "p.pdb").exists()
+    assert (tmp_path / "p.cif").exists()
 
 
 def test_cif_altloc_and_insertion_code_written(tmp_path):
